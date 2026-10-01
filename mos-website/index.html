@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="en" data-dark="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MOS — Websites, Hosting, IT Support &amp; Repairs</title>
+<meta name="description" content="MOS builds websites and web platforms, hosts and looks after them, and handles the rest of your IT — support, repairs, monitoring and clear invoicing from one team.">
+<meta name="theme-color" content="#171015">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+/* =====================================================================
+   MOS — public website. "Dimensional".
+
+   The whole site is this file plus site.js, i18n.js and icons/. No build
+   step, no package manager, no CDN, no framework, nothing to install: open
+   index.html and it works, put the folder on any static host and it is
+   live. That is a deliberate constraint rather than an accident of size,
+   and it is worth keeping — a marketing page that needs a toolchain to
+   change a price is a page nobody changes.
+
+   Two things shape it:
+     1. Scope. The company does more than websites, so Services carries
+        five cards, not three: website creation, hosting, IT support, IT
+        repairs and monitoring. Two further sections (Security, Roles)
+        exist because those are the questions clients actually ask before
+        signing.
+     2. Depth. Everything 3D here is CSS only — perspective,
+        preserve-3d, translateZ. No WebGL, no library, nothing to
+        vendor. Search "3D" below for the whole system; it is one block,
+        not sprinkled through the file.
+     3. Two languages, one page. The English written below is the
+        original; i18n.js holds the French, keyed by the English
+        sentences themselves, and site.js swaps the text in place. So
+        there is no second copy of this markup to keep in step, and a
+        sentence with no translation stays in English rather than
+        breaking anything. The consequence to remember: EDITING AN
+        ENGLISH SENTENCE HERE UNHOOKS ITS FRENCH, because the sentence
+        was the key. Edit the pair. ?i18n=check reports the drift — see
+        the README.
+
+   STANDALONE. This folder is the public brochure and nothing else. It
+   holds no link, no path, no shared code and no shared origin with the
+   MOS platform: no sign-in links, no client portal, no Arcade. Somebody
+   reading this page cannot reach the app from it, and nothing here knows
+   the app's address. Keep it that way — if a portal link is ever wanted
+   back, it belongs behind one clearly-marked absolute https:// URL, not a
+   relative path, and the site must still be served from its own domain.
+
+   The design tokens below are the brand palette, held here in full. If
+   the palette ever changes, it changes here.
+===================================================================== */
+
+:root{
+  /* Light — the MOS palette, pulled toward burgundy.
+     Two changes from the plain brand neutrals, both deliberate:
+       · the neutrals carry a red cast instead of the app's cool grey, so
+         every surface, border and body line sits in the same wine family;
+       · --accent-2 is burgundy rather than navy, which makes the deep
+         colour on the page read wine instead of ink.
+     Gold stays the primary accent — it is the MOS mark and the only
+     colour with enough contrast for a filled button — so burgundy comes
+     in as the second voice, not a replacement. */
+  --bg:#F6F2F2; --surface:#FFFFFF; --border:#E4DBDC; --text:#211A1C; --text-soft:#665A5D;
+  --accent:#E0A33B; --accent-soft:#F4D9A6; --accent-2:#6E1B2E; --accent-contrast:#1A1300;
+  --burgundy:#6E1B2E; --burgundy-soft:#F2DEE2; --burgundy-line:#8E2439;
+  --danger:#C1372B; --ok:#3C7A4E; --ok-soft:#CFE7D6;
+  /* Vertical rhythm of a section, shared by the padding and by the
+     scroll-margin that lands anchor jumps on the heading — see .section. */
+  --sect-pad:96px;
+  --radius:10px;
+  --font-display:'Avenir Next','Segoe UI',system-ui,sans-serif;
+  --font-body:'Segoe UI',system-ui,sans-serif;
+  --font-mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --shadow:0 20px 60px rgba(0,0,0,.10);
+  --nav-h:64px;
+  color-scheme:light;
+}
+html[data-dark="true"]{
+  /* Dark — same idea as the light set: the charcoal is a plum charcoal, not
+     a blue one, and --accent-soft (the chip behind gold icons) is a burgundy
+     block rather than a brown one. Burgundy itself has to lift a long way on
+     dark before it stops reading as black, hence the much lighter value. */
+  --bg:#171015; --surface:#211820; --border:#3A2A32; --text:#F0E9EB; --text-soft:#A8969C;
+  --accent-soft:#4A2530;
+  --burgundy:#C25068; --burgundy-soft:#3A1A24; --burgundy-line:#A63047;
+  --accent-2:#C25068;
+  --shadow:0 20px 60px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;}
+/* Several collapsible panels (console tabs, card details) set their own
+   display, which beats the UA sheet's [hidden] rule and leaves everything
+   open at once. Everything toggled by JS uses the hidden attribute, so
+   enforce it once here rather than per-component. */
+[hidden]{display:none !important;}
+html{scroll-behavior:smooth; scroll-padding-top:calc(var(--nav-h) + 16px);}
+body{
+  margin:0; background:var(--bg); color:var(--text); font-family:var(--font-body);
+  line-height:1.6; -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+h1,h2,h3,h4{font-family:var(--font-display); line-height:1.15; margin:0;}
+p{margin:0;}
+a{color:var(--accent); text-decoration:none;}
+img{max-width:100%;}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;}
+
+.wrap{max-width:1140px; margin:0 auto; padding:0 24px;}
+.eyebrow{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px; display:flex; align-items:center; gap:8px;
+}
+.eyebrow::before{content:''; width:18px; height:1px; background:var(--accent); flex:none;}
+.section{padding:var(--sect-pad) 0; position:relative;}
+/* Where a nav click lands.
+   scroll-padding-top above clears the fixed nav, so the browser parks the
+   *section's top edge* just under it — and every section then opens with
+   --sect-pad of empty space before its eyebrow, leaving the heading you
+   actually clicked for the best part of 180px down the viewport. Pulling
+   the landing point back up by that same padding lands the eyebrow ~24px
+   under the nav instead, so the first thing on screen is the text you
+   navigated to. Negative because the target is above, not below, the
+   default resting point; both values track --sect-pad so the phone
+   breakpoint stays in step for free. */
+.section[id]{scroll-margin-top:calc(24px - var(--sect-pad));}
+.section-head{max-width:660px; margin-bottom:48px;}
+.section-head h2{font-size:clamp(26px,3.6vw,38px); letter-spacing:-.02em; margin-bottom:12px;}
+.section-head p{color:var(--text-soft); font-size:16px;}
+/* Alternating bands carry a wash of burgundy rather than plain surface, so
+   the page reads as stripes of wine and near-black instead of two greys. */
+.alt{
+  background:color-mix(in srgb, var(--burgundy) 7%, var(--surface));
+  border-block:1px solid var(--border);
+}
+
+/* ---------- Heat layer: MOS's signature cursor-follow glow ---------- */
+#heatLayer{
+  position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0; transition:opacity .4s ease;
+  background:radial-gradient(420px circle at var(--heat-x,50%) var(--heat-y,50%),
+    color-mix(in srgb, var(--burgundy) 20%, transparent), transparent 65%);
+}
+#heatLayer.active{opacity:1;}
+@media (hover:none){ #heatLayer{display:none;} }
+
+/* ---------- Brand mark: the three MOS bars ---------- */
+.brand-mark{display:flex; align-items:flex-end; gap:4px; height:22px;}
+.brand-mark .bar{width:5px; border-radius:3px; background:var(--accent); display:block;}
+.brand-mark .b1{height:40%;} .brand-mark .b2{height:70%;} .brand-mark .b3{height:100%;}
+.brand-lockup{display:flex; align-items:center; gap:10px;}
+.brand-title{font-family:var(--font-display); font-weight:800; font-size:19px; letter-spacing:.06em;}
+
+/* ---------- Buttons ---------- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px;
+  border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text);
+  padding:11px 20px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;
+  transition:border-color .15s ease, transform .15s ease, background .15s ease, box-shadow .15s ease;
+  white-space:nowrap;
+}
+.btn:hover{border-color:var(--accent); transform:translateY(-1px);}
+.btn-primary{
+  background:var(--accent); border-color:var(--accent); color:var(--accent-contrast);
+  box-shadow:0 4px 16px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.btn-primary:hover{filter:brightness(1.06); box-shadow:0 8px 26px color-mix(in srgb, var(--accent) 42%, transparent);}
+.btn-ghost{background:transparent;}
+.btn-lg{padding:14px 26px; font-size:15px; min-height:50px;}
+
+/* ---------- Nav ---------- */
+.nav{
+  position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
+  display:flex; align-items:center; background:color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  /* No bottom border: #scrollTrack below draws the rule instead, so there is
+     only ever one line under the bar. */
+  transition:background .2s ease;
+}
+.nav.scrolled{background:color-mix(in srgb, var(--bg) 94%, transparent);}
+.nav .wrap{display:flex; align-items:center; gap:18px; width:100%;}
+.nav-links{display:flex; align-items:center; gap:4px; margin-left:auto;}
+.nav-links a{
+  color:var(--text-soft); font-size:13.5px; font-weight:600; padding:8px 12px; border-radius:8px;
+  transition:color .15s ease, background .15s ease; position:relative;
+}
+.nav-links a:hover{color:var(--text); background:var(--bg);}
+.nav-links a.current{color:var(--accent);}
+.nav-actions{display:flex; align-items:center; gap:8px; margin-left:8px;}
+.icon-btn{
+  /* 44px, not 40 — minimum comfortable touch target */
+  width:44px; height:44px; flex:none; display:inline-flex; align-items:center; justify-content:center;
+  background:none; border:1px solid var(--border); border-radius:8px; color:var(--text-soft);
+  cursor:pointer; transition:border-color .15s ease, color .15s ease, transform .15s ease;
+}
+.icon-btn:hover{border-color:var(--accent); color:var(--accent); transform:translateY(-1px);}
+.icon-btn svg{width:17px; height:17px;}
+/* Carries text instead of an icon, so it needs the type treatment the
+   other two get from their SVGs: mono and tracked-out, the same as the
+   eyebrows and the Ctrl-K hint, which is the page's voice for "this is a
+   label, not prose". Narrower than 44px would read as a different kind of
+   control from the two beside it, so the width stays and the letters just
+   sit in the middle of it. */
+.lang-btn{
+  font-family:var(--font-mono); font-size:11.5px; font-weight:700;
+  letter-spacing:.06em; padding:0;
+}
+.nav-toggle{display:none;}
+/* Scroll progress hairline along the very bottom edge of the nav.
+   The rule under the nav is drawn once, here, and not by the nav's own
+   border — a 1px border with a 2px progress bar lying across it gives an
+   edge that changes thickness wherever the fill happens to stop, which
+   reads as a broken double line stepping under the menu items. Track and
+   fill are the same 2px, so the line is one weight all the way across and
+   only its colour changes at the scroll position. */
+#scrollTrack{
+  position:absolute; left:0; right:0; bottom:0; height:2px;
+  background:var(--border);
+  opacity:0; transition:opacity .2s ease;
+}
+.nav.scrolled #scrollTrack{opacity:1;}
+#scrollProgress{
+  height:100%; width:0%;
+  background:linear-gradient(90deg, var(--burgundy-line), var(--accent));
+  transition:width .1s linear;
+}
+
+/* ---------- Hero ---------- */
+.hero{padding:calc(var(--nav-h) + 84px) 0 84px; position:relative; overflow:hidden;}
+.hero::before{
+  /* Two washes, not one: the amber bleed from the top-left is the MOS
+     login-screen signature, and a deeper burgundy pool rises on the right
+     so the headline sits between the two brand colours rather than on a
+     flat field. Both are transparent mixes, so they follow the theme. */
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(900px 520px at 12% -12%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
+    radial-gradient(820px 560px at 92% 4%, color-mix(in srgb, var(--burgundy) 26%, transparent), transparent 68%);
+}
+.hero .wrap{position:relative; z-index:1;}
+.hero-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center;}
+.hero h1{font-size:clamp(34px,5.4vw,58px); letter-spacing:-.03em; margin-bottom:20px;}
+/* The highlight underline is painted as a background layer rather than v1's
+   absolutely-positioned ::after, which forced white-space:nowrap to stop the
+   bar detaching from a wrapped phrase. nowrap on a phrase this long gives the
+   hero column a min-content width wider than a phone, and since 1fr is
+   minmax(auto,1fr) the whole grid grows with it — the headline, the copy and
+   the console all get clipped by body's overflow-x. A background follows the
+   line boxes for free, so the phrase can wrap and the bar wraps with it. */
+.hero h1 .hl{
+  color:var(--accent);
+  background-image:linear-gradient(
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    color-mix(in srgb, var(--accent) 22%, transparent));
+  background-repeat:no-repeat;
+  background-size:100% 9px;
+  background-position:0 86%;
+  -webkit-box-decoration-break:clone;
+          box-decoration-break:clone;
+  border-radius:3px;
+}
+.hero-sub{font-size:clamp(15px,1.9vw,18.5px); color:var(--text-soft); max-width:52ch; margin-bottom:30px;}
+.hero-cta{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:26px;}
+.hero-note{
+  font-family:var(--font-mono); font-size:12px; color:var(--text-soft);
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.hero-note .dot{width:7px; height:7px; border-radius:50%; background:var(--ok); flex:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent);}
+
+/* Console panel — a stylised nod to MOS's own status strip + row cards */
+.console{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.console-bar{
+  display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--border);
+  background:color-mix(in srgb, var(--bg) 55%, var(--surface));
+}
+.console-dot{width:10px; height:10px; border-radius:50%; flex:none;}
+.console-title{
+  font-family:var(--font-mono); font-size:11px; color:var(--text-soft);
+  letter-spacing:.06em; text-transform:uppercase; margin-left:6px;
+}
+.console-strip{display:flex; gap:0; border-bottom:1px solid var(--border); flex-wrap:wrap;}
+.console-stat{flex:1; min-width:96px; padding:14px 16px; border-right:1px solid var(--border);}
+.console-stat:last-child{border-right:none;}
+.console-stat .k{
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-soft); display:block; margin-bottom:3px;
+}
+.console-stat .v{font-family:var(--font-mono); font-size:20px; font-weight:700; letter-spacing:-.01em;}
+.console-stat .v.ok{color:var(--ok);}
+.console-stat .v.amber{color:var(--accent);}
+.console-rows{padding:10px;}
+.console-row{
+  display:flex; align-items:center; gap:11px; padding:10px 11px; border-radius:9px;
+  border:1px solid transparent; transition:border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.console-row + .console-row{margin-top:3px;}
+.console-row:hover{border-color:var(--accent); background:var(--bg); transform:translateX(3px);}
+.console-row .nm{font-size:13px; font-weight:700; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.console-row .mt{font-family:var(--font-mono); font-size:10.5px; color:var(--text-soft);}
+.pill{
+  font-family:var(--font-mono); font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; display:inline-flex; align-items:center; gap:5px; flex:none;
+}
+.pill::before{content:''; width:5px; height:5px; border-radius:50%; background:currentColor;}
+.pill-ok{color:var(--ok); background:var(--ok-soft);}
+.pill-warn{color:var(--accent-2); background:var(--accent-soft);}
+html[data-dark="true"] .pill-warn{color:var(--accent);}
+
+/* Live "uptime" ticker bars in the console footer */
+.console-spark{display:flex; align-items:flex-end; gap:3px; height:34px; padding:0 14px 13px;}
+.console-spark i{
+  flex:1; background:color-mix(in srgb, var(--ok) 55%, transparent); border-radius:2px 2px 0 0;
+  min-height:3px; transition:height .5s cubic-bezier(.4,0,.2,1);
+}
+
+/* ---------- Logo / trust strip ---------- */
+.trust{
+  padding:26px 0; border-block:1px solid var(--border);
+  background:color-mix(in srgb, var(--burgundy) 10%, var(--surface));
+}
+.trust .wrap{display:flex; align-items:center; gap:14px 40px; flex-wrap:wrap; justify-content:center;}
+.trust .lbl{
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-soft);
+}
+.trust .item{display:flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600; color:var(--text-soft);}
+.trust .item svg{width:16px; height:16px; color:var(--accent); flex:none;}
+
+/* ---------- Service cards ---------- */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(258px,1fr)); gap:18px;}
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px 24px;
+  display:flex; flex-direction:column; gap:12px; position:relative;
+  transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.card::after{
+  /* Accent hairline that wipes in across the top edge on hover.
+     Inset from the corners rather than clipped by overflow:hidden — the
+     card is a 3D surface in v2, and any overflow other than visible
+     flattens preserve-3d, killing the depth on the icon and heading. */
+  content:''; position:absolute; top:0; left:14px; right:14px; height:2px; background:var(--accent);
+  border-radius:0 0 2px 2px;
+  transform:scaleX(0); transform-origin:left; transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+.card:hover{border-color:var(--accent); transform:translateY(-4px); box-shadow:var(--shadow);}
+.card:hover::after{transform:scaleX(1);}
+.card-ico{
+  width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center;
+  background:var(--accent-soft); color:var(--accent); flex:none;
+}
+html[data-dark="true"] .card-ico{color:var(--accent);}
+.card-ico svg{width:21px; height:21px;}
+.card h3{font-size:16.5px;}
+.card p{color:var(--text-soft); font-size:14px; flex:1;}
+.card ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:7px;}
+.card li{
+  font-size:13px; color:var(--text-soft); display:flex; align-items:flex-start; gap:8px; line-height:1.45;
+}
+.card li svg{width:14px; height:14px; color:var(--ok); flex:none; margin-top:3px;}
+
+/* ---------- Process timeline ---------- */
+.steps{display:grid; grid-template-columns:repeat(4,1fr); gap:0; position:relative; margin-top:8px;}
+.steps::before{
+  content:''; position:absolute; top:23px; left:9%; right:9%; height:2px; background:var(--border);
+}
+.step{padding:0 14px; text-align:center; position:relative;}
+.step-num{
+  width:46px; height:46px; border-radius:50%; margin:0 auto 16px; position:relative; z-index:1;
+  display:flex; align-items:center; justify-content:center; background:var(--surface);
+  border:2px solid var(--border); font-family:var(--font-mono); font-weight:700; font-size:15px;
+  color:var(--text-soft); transition:border-color .3s ease, color .3s ease, background .3s ease, transform .3s ease;
+}
+/* "Reached while scrolling" is deliberately quieter than "currently selected"
+   below, so the timeline can show progress without competing with the tab. */
+.step.lit .step-num{border-color:var(--accent); color:var(--accent);}
+/* Spans rather than h4/p: each step is a <button>, which may only contain
+   phrasing content. Same look, valid markup, and no heading buried in a
+   control for screen readers to trip over. */
+.step .sh{display:block; font-family:var(--font-display); font-weight:700; font-size:15px; margin-bottom:7px; line-height:1.2;}
+.step .sp{display:block; font-size:13.5px; color:var(--text-soft); line-height:1.6;}
+
+/* ---------- Included / feature list ---------- */
+.feat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(232px,1fr)); gap:14px;}
+.feat{
+  display:flex; gap:13px; padding:18px; border:1px solid var(--border); border-radius:12px;
+  background:var(--surface); transition:border-color .2s ease, transform .2s ease;
+}
+.feat:hover{border-color:var(--accent); transform:translateY(-2px);}
+.feat svg{width:19px; height:19px; color:var(--accent); flex:none; margin-top:2px;}
+.feat h4{font-size:14.5px; margin-bottom:4px;}
+.feat p{font-size:13px; color:var(--text-soft);}
+
+/* ---------- Pricing ---------- */
+.price-toggle{
+  display:inline-flex; align-items:center; gap:4px; padding:4px; border:1px solid var(--border);
+  border-radius:999px; background:var(--surface); margin-bottom:36px;
+}
+.price-toggle button{
+  border:none; background:none; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+  color:var(--text-soft); padding:11px 18px; border-radius:999px; min-height:44px;
+  transition:background .2s ease, color .2s ease;
+}
+.price-toggle button.on{background:var(--accent); color:var(--accent-contrast);}
+.save-chip{
+  font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--ok);
+  background:var(--ok-soft); padding:2px 7px; border-radius:999px; margin-left:6px;
+}
+/* 248, not v1's 272: with four tiers, 272 needs 1106px of track inside a
+   1140px wrap and just misses, dropping Enterprise onto a row of its own. */
+.tiers{display:grid; grid-template-columns:repeat(auto-fit,minmax(248px,1fr)); gap:18px; align-items:start;}
+.tier{
+  background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px 26px;
+  display:flex; flex-direction:column; gap:16px; position:relative;
+  transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.tier:hover{border-color:var(--accent); transform:translateY(-3px); box-shadow:var(--shadow);}
+.tier.featured{border-color:var(--accent); box-shadow:var(--shadow);}
+.tier-flag{
+  position:absolute; top:-11px; left:26px; font-family:var(--font-mono); font-size:9.5px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; background:var(--accent); color:var(--accent-contrast);
+  padding:4px 11px; border-radius:999px;
+}
+.tier h3{font-size:16px;}
+.tier .blurb{font-size:13.5px; color:var(--text-soft); min-height:40px;}
+.tier .amt{display:flex; align-items:baseline; gap:5px; font-family:var(--font-mono);}
+.tier .amt .num{font-size:38px; font-weight:800; letter-spacing:-.02em;}
+.tier .amt .num-custom{font-size:25px; font-weight:800; letter-spacing:-.01em; color:var(--accent);}
+.tier .amt .per{font-size:12.5px; color:var(--text-soft);}
+.tier ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:9px; flex:1;}
+.tier li{font-size:13.5px; display:flex; align-items:flex-start; gap:9px; line-height:1.45;}
+.tier li svg{width:15px; height:15px; color:var(--ok); flex:none; margin-top:3px;}
+.tier li.off{color:var(--text-soft); opacity:.62;}
+.tier li.off svg{color:var(--text-soft);}
+.price-foot{
+  margin-top:28px; font-size:13px; color:var(--text-soft); text-align:center;
+}
+
+/* ---------- FAQ (native details, same as MOS accordions) ---------- */
+.faq{max-width:780px;}
+details.qa{
+  border:1px solid var(--border); border-radius:12px; background:var(--surface); margin-bottom:10px;
+  overflow:hidden; transition:border-color .2s ease;
+}
+details.qa:hover{border-color:var(--accent);}
+details.qa summary{
+  list-style:none; cursor:pointer; padding:18px 22px; font-weight:700; font-size:15px;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  font-family:var(--font-display); min-height:56px;
+}
+details.qa summary::-webkit-details-marker{display:none;}
+details.qa summary::after{
+  content:''; width:9px; height:9px; flex:none; border-right:2px solid var(--text-soft);
+  border-bottom:2px solid var(--text-soft); transform:rotate(45deg) translateY(-2px);
+  transition:transform .22s ease, border-color .22s ease;
+}
+details.qa[open] summary::after{transform:rotate(-135deg) translateY(-2px); border-color:var(--accent);}
+details.qa .qa-body{padding:0 22px 20px; color:var(--text-soft); font-size:14px;}
+
+/* ---------- Contact ---------- */
+.contact-grid{display:grid; grid-template-columns:1fr 1fr; gap:44px; align-items:start;}
+.field{display:block; margin-bottom:15px; font-size:13px; color:var(--text-soft);}
+.field span{display:block; margin-bottom:6px; font-weight:600;}
+/* A span *inside* the label text — the "(optional)" qualifier, the character
+   counter — is a phrase, not its own line. Without this it inherits the
+   block above and drops the qualifier onto a second row, which also knocks
+   side-by-side fields out of alignment with each other. */
+.field span span{display:inline; margin-bottom:0;}
+.field input, .field select, .field textarea{
+  width:100%; padding:12px 13px; border-radius:8px; border:1px solid var(--border);
+  background:var(--bg); color:var(--text); font-size:14px; font-family:inherit; min-height:46px;
+}
+.field textarea{min-height:112px; resize:vertical;}
+.field input:focus, .field select:focus, .field textarea:focus{
+  outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);
+}
+.form-note{font-size:12px; color:var(--text-soft); margin-top:12px;}
+.form-ok{
+  background:var(--ok-soft); color:var(--ok); border-radius:9px; padding:12px 14px; font-size:13.5px;
+  font-weight:600; margin-bottom:14px;
+}
+.contact-side .feat{margin-bottom:11px;}
+
+/* ---------- Footer ---------- */
+/* Deepest burgundy on the page — the foot of the document is where the
+   colour is allowed to be a block rather than a wash. */
+footer{
+  border-top:2px solid var(--burgundy-line); padding:44px 0 30px;
+  background:color-mix(in srgb, var(--burgundy) 14%, var(--surface));
+}
+.foot-grid{display:flex; justify-content:space-between; gap:32px; flex-wrap:wrap; margin-bottom:28px;}
+.foot-col h5{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-soft); margin:0 0 12px; font-weight:700;
+}
+.foot-col a{display:block; color:var(--text-soft); font-size:13.5px; padding:4px 0; transition:color .15s ease;}
+.foot-col a:hover{color:var(--accent);}
+.foot-bar{
+  border-top:1px solid var(--border); padding-top:20px; display:flex; justify-content:space-between;
+  gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--text-soft);
+}
+
+/* ---------- Scroll reveal ---------- */
+.rv{opacity:0; transform:translateY(16px); transition:opacity .55s cubic-bezier(.4,0,.2,1), transform .55s cubic-bezier(.4,0,.2,1);}
+.rv.in{opacity:1; transform:none;}
+
+/* =====================================================================
+   INTERACTIVE BLOCKS
+   Everything below drives the parts of the page a visitor can actually
+   operate: the console demo, the work gallery, the process explorer
+   and the plan comparison. Each is keyboard-reachable —
+   nothing here is hover-only.
+===================================================================== */
+
+/* ---------- Shared: tab strips ---------- */
+.tabs{display:flex; gap:2px; padding:8px 10px 0; border-bottom:1px solid var(--border); flex-wrap:wrap;}
+.tab{
+  border:none; background:none; font-family:var(--font-mono); font-size:10.5px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--text-soft); cursor:pointer;
+  padding:9px 12px; border-radius:8px 8px 0 0; position:relative; min-height:38px;
+  transition:color .18s ease, background .18s ease;
+}
+.tab:hover{color:var(--text); background:var(--bg);}
+.tab[aria-selected="true"]{color:var(--accent);}
+.tab[aria-selected="true"]::after{
+  content:''; position:absolute; left:10px; right:10px; bottom:-1px; height:2px;
+  background:var(--accent); border-radius:2px 2px 0 0;
+}
+
+/* ---------- Shared: chips ---------- */
+.chip{
+  font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.05em;
+  padding:4px 9px; border-radius:999px; border:1px solid var(--border); color:var(--text-soft);
+  background:var(--bg); display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+}
+.chip-accent{color:var(--accent); border-color:color-mix(in srgb, var(--accent) 45%, transparent);}
+.demo-flag{
+  font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); background:var(--accent-soft); padding:3px 8px; border-radius:999px; margin-left:auto;
+}
+html[data-dark="true"] .demo-flag{color:var(--accent);}
+
+/* ---------- Hero console: interactive version ---------- */
+.console-row{width:100%; text-align:left; font-family:inherit; cursor:pointer;}
+.console-row:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
+.console-row[aria-expanded="true"]{border-color:var(--accent); background:var(--bg);}
+.console-row .chev{
+  width:8px; height:8px; flex:none; border-right:1.5px solid var(--text-soft);
+  border-bottom:1.5px solid var(--text-soft); transform:rotate(45deg) translate(-2px,-2px);
+  transition:transform .22s ease;
+}
+.console-row[aria-expanded="true"] .chev{transform:rotate(-135deg) translate(-1px,-1px); border-color:var(--accent);}
+.console-detail{
+  padding:12px 12px 4px; margin:2px 0 6px; border-radius:9px; background:var(--bg);
+  border:1px solid var(--border); border-top:2px solid var(--accent);
+}
+.cd-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(88px,1fr)); gap:10px; margin-bottom:10px;}
+.cd-grid div span{
+  font-family:var(--font-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-soft); display:block; margin-bottom:2px;
+}
+.cd-grid div b{font-family:var(--font-mono); font-size:12.5px; font-weight:700;}
+.cd-bars{display:flex; align-items:flex-end; gap:2px; height:26px; margin-bottom:10px;}
+.cd-bars i{flex:1; border-radius:2px 2px 0 0; min-height:3px; background:color-mix(in srgb, var(--ok) 55%, transparent);}
+.cd-bars i.dip{background:color-mix(in srgb, var(--accent) 70%, transparent);}
+.cd-note{font-family:var(--font-mono); font-size:10.5px; color:var(--text-soft); padding-bottom:8px;}
+.console-list{padding:10px; display:flex; flex-direction:column; gap:3px;}
+.log-row{display:flex; align-items:flex-start; gap:10px; padding:9px 11px; border-radius:9px; border:1px solid transparent;}
+.log-row:hover{border-color:var(--border); background:var(--bg);}
+.log-row .when{font-family:var(--font-mono); font-size:10px; color:var(--text-soft); width:52px; flex:none; padding-top:2px;}
+.log-row .what{font-size:12.5px; flex:1; min-width:0;}
+.log-row .what em{display:block; font-style:normal; font-family:var(--font-mono); font-size:10px; color:var(--text-soft); margin-top:2px;}
+.pill-due{color:var(--danger); background:color-mix(in srgb, var(--danger) 16%, transparent);}
+.pill-muted{color:var(--text-soft); background:var(--bg); border:1px solid var(--border);}
+
+/* ---------- Service cards: expandable detail ---------- */
+.card-more{
+  border:none; background:none; font-family:var(--font-mono); font-size:10.5px; font-weight:700;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--accent); cursor:pointer; padding:8px 0 0;
+  display:inline-flex; align-items:center; gap:7px; align-self:flex-start; min-height:34px;
+}
+.card-more .chev{
+  width:7px; height:7px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor;
+  transform:rotate(45deg) translateY(-2px); transition:transform .22s ease;
+}
+.card-more[aria-expanded="true"] .chev{transform:rotate(-135deg) translateY(-1px);}
+.card-detail{
+  border-top:1px dashed var(--border); padding-top:14px; margin-top:2px;
+  display:grid; grid-template-columns:1fr 1fr; gap:12px;
+}
+.card-detail div span{
+  font-family:var(--font-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-soft); display:block; margin-bottom:3px;
+}
+.card-detail div b{font-size:13px;}
+.card-detail .full{grid-column:1 / -1; font-size:13px; color:var(--text-soft); line-height:1.5;}
+
+/* ---------- Work gallery ---------- */
+.filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:26px;}
+.filter{
+  border:1px solid var(--border); background:var(--surface); color:var(--text-soft); cursor:pointer;
+  font-family:inherit; font-size:13px; font-weight:600; padding:9px 16px; border-radius:999px;
+  min-height:42px; transition:border-color .18s ease, color .18s ease, background .18s ease;
+}
+.filter:hover{border-color:var(--accent); color:var(--text);}
+.filter[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-contrast);}
+.filter .n{font-family:var(--font-mono); font-size:11px; opacity:.7; margin-left:6px;}
+.work-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:18px;}
+.work-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  text-align:left; font-family:inherit; color:inherit; cursor:pointer; padding:0; display:flex;
+  flex-direction:column; transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease, opacity .3s ease;
+}
+.work-card:hover{border-color:var(--accent); transform:translateY(-4px); box-shadow:var(--shadow);}
+.work-card.hide{display:none;}
+.work-thumb{
+  height:132px; position:relative; overflow:hidden; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+}
+.work-thumb .glyph{font-family:var(--font-display); font-weight:800; font-size:42px; letter-spacing:-.03em; opacity:.9;}
+.work-thumb .sample{
+  position:absolute; top:10px; right:10px; font-family:var(--font-mono); font-size:8.5px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; background:color-mix(in srgb, var(--bg) 78%, transparent);
+  color:var(--text-soft); border:1px solid var(--border); padding:3px 7px; border-radius:999px;
+  backdrop-filter:blur(4px);
+}
+.work-body{padding:18px 20px 20px; display:flex; flex-direction:column; gap:9px; flex:1;}
+/* Card innards are spans, not h3/p — the whole card is a <button>, and only
+   phrasing content is valid inside one. Styled to read as a heading anyway. */
+.work-body .wt{font-family:var(--font-display); font-weight:700; font-size:15.5px; line-height:1.2;}
+.work-kind{font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent);}
+.work-body .wp{font-size:13.5px; color:var(--text-soft); flex:1; line-height:1.55;}
+.work-meta{display:flex; gap:7px; flex-wrap:wrap; padding-top:2px;}
+.work-open{
+  font-family:var(--font-mono); font-size:10.5px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--accent); display:flex; align-items:center; gap:6px; padding-top:4px;
+}
+.work-card:hover .work-open .arw{transform:translateX(4px);}
+.work-open .arw{transition:transform .2s ease;}
+.empty-state{
+  border:1px dashed var(--border); border-radius:12px; padding:40px 24px; text-align:center;
+  color:var(--text-soft); font-size:14px; grid-column:1 / -1;
+}
+
+/* ---------- Case-study modal ---------- */
+.modal-root{position:fixed; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; padding:20px;}
+.modal-root[hidden]{display:none;}
+.modal-back{position:absolute; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); animation:fade .2s ease;}
+.modal-panel{
+  position:relative; background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  width:min(680px,100%); max-height:calc(100vh - 40px); overflow-y:auto; box-shadow:var(--shadow);
+  animation:pop .24s cubic-bezier(.4,0,.2,1);
+}
+@keyframes fade{from{opacity:0;}}
+@keyframes pop{from{opacity:0; transform:translateY(14px) scale(.985);}}
+.modal-head{padding:26px 26px 0; display:flex; align-items:flex-start; gap:16px;}
+.modal-head h3{font-size:21px; letter-spacing:-.02em; margin-bottom:6px;}
+.modal-close{
+  width:38px; height:38px; flex:none; border-radius:9px; border:1px solid var(--border); background:var(--bg);
+  color:var(--text-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto;
+}
+.modal-close:hover{border-color:var(--accent); color:var(--accent);}
+.modal-close svg{width:16px; height:16px;}
+.modal-body{padding:20px 26px 26px; display:flex; flex-direction:column; gap:20px;}
+.ms-block h4{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:8px;
+}
+.ms-block p{font-size:14px; color:var(--text-soft); line-height:1.6;}
+.ms-block ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px;}
+.ms-block li{font-size:13.5px; display:flex; gap:9px; align-items:flex-start; line-height:1.5;}
+.ms-block li svg{width:14px; height:14px; color:var(--ok); flex:none; margin-top:4px;}
+.ms-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:12px;}
+.ms-stat{border:1px solid var(--border); border-radius:11px; padding:14px; background:var(--bg);}
+.ms-stat span{
+  font-family:var(--font-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-soft); display:block; margin-bottom:4px;
+}
+.ms-stat b{font-family:var(--font-mono); font-size:18px; font-weight:800;}
+/* Write-ups end in one or two actions — "go and look at it" beats "enquire"
+   for anything with a live link, so the pair wraps rather than stacking. */
+.modal-cta{display:flex; gap:10px; flex-wrap:wrap;}
+.modal-cta .btn{flex:1; min-width:180px;}
+
+/* ---------- Process explorer ---------- */
+.step-btn{
+  border:none; background:none; font-family:inherit; color:inherit; cursor:pointer;
+  padding:0 14px 8px; text-align:center; width:100%; border-radius:12px;
+}
+.step-btn:hover .step-num{border-color:var(--accent); color:var(--accent);}
+.step[aria-selected="true"] .step-num{
+  border-color:var(--accent); color:var(--accent-contrast); background:var(--accent); transform:scale(1.08);
+}
+.step-panel{
+  margin-top:38px; border:1px solid var(--border); border-top:2px solid var(--accent); border-radius:14px;
+  background:var(--bg); padding:28px; display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:28px;
+}
+html[data-dark="true"] .step-panel{background:color-mix(in srgb, var(--bg) 60%, var(--surface));}
+.step-panel h4{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:10px;
+}
+.step-panel p{font-size:14px; color:var(--text-soft); line-height:1.6;}
+.step-panel ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px;}
+.step-panel li{font-size:13.5px; color:var(--text-soft); display:flex; gap:9px; align-items:flex-start; line-height:1.5;}
+.step-panel li svg{width:13px; height:13px; color:var(--ok); flex:none; margin-top:4px;}
+.step-dur{
+  display:inline-flex; align-items:center; gap:7px; margin-top:14px; font-family:var(--font-mono);
+  font-size:11px; color:var(--text-soft); border:1px solid var(--border); border-radius:999px; padding:5px 12px;
+  background:var(--surface);
+}
+.step-dur b{color:var(--accent);}
+.fade-swap{animation:swapIn .28s cubic-bezier(.4,0,.2,1);}
+@keyframes swapIn{from{opacity:0; transform:translateY(8px);}}
+
+/* ---------- Shared: option cards ---------- */
+.opt-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;}
+.opt{position:relative;}
+.opt input{position:absolute; opacity:0; width:1px; height:1px;}
+.opt span{
+  display:flex; flex-direction:column; gap:3px; border:1px solid var(--border); border-radius:11px;
+  padding:13px 15px; background:var(--surface); cursor:pointer; min-height:56px; justify-content:center;
+  transition:border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.opt span b{font-size:13.5px; font-weight:700;}
+.opt span i{font-style:normal; font-family:var(--font-mono); font-size:10.5px; color:var(--text-soft);}
+.opt span:hover{border-color:var(--accent); transform:translateY(-2px);}
+.opt input:checked + span{
+  border-color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, var(--surface));
+  box-shadow:inset 0 0 0 1px var(--accent);
+}
+.opt input:focus-visible + span{outline:2px solid var(--accent); outline-offset:2px;}
+.opt input:checked + span i{color:var(--accent);}
+
+/* ---------- Plan comparison table ---------- */
+.cmp{margin-top:26px; border:1px solid var(--border); border-radius:14px; background:var(--surface); overflow:hidden;}
+.cmp summary{
+  list-style:none; cursor:pointer; padding:17px 22px; font-weight:700; font-size:14.5px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:54px;
+  font-family:var(--font-display);
+}
+.cmp summary::-webkit-details-marker{display:none;}
+.cmp summary::after{
+  content:''; width:9px; height:9px; flex:none; border-right:2px solid var(--text-soft);
+  border-bottom:2px solid var(--text-soft); transform:rotate(45deg) translateY(-2px); transition:transform .22s ease;
+}
+.cmp[open] summary::after{transform:rotate(-135deg) translateY(-2px); border-color:var(--accent);}
+.cmp-scroll{overflow-x:auto; border-top:1px solid var(--border);}
+/* min-width raised from v1's 560px: the grid gained an Enterprise column, and
+   six columns at 560 is unreadable. The .cmp-scroll wrapper handles the
+   overflow. */
+table.cmp-table{border-collapse:collapse; width:100%; min-width:700px; font-size:13.5px;}
+.cmp-table th, .cmp-table td{padding:12px 16px; text-align:left; border-bottom:1px solid var(--border);}
+.cmp-table thead th{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--text-soft); background:var(--bg); position:sticky; top:0;
+}
+.cmp-table tbody th{font-weight:600; color:var(--text-soft); width:38%;}
+.cmp-table td{text-align:center; font-family:var(--font-mono); font-size:12.5px;}
+.cmp-table tbody tr:hover{background:var(--bg);}
+.cmp-table tbody tr:last-child th, .cmp-table tbody tr:last-child td{border-bottom:none;}
+.cmp-table .yes{color:var(--ok); font-size:15px;}
+.cmp-table .no{color:var(--text-soft); opacity:.5;}
+.cmp-table col.hi, .cmp-table th.hi{background:color-mix(in srgb, var(--accent) 8%, transparent);}
+
+/* ---------- FAQ search ---------- */
+.faq-tools{display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; max-width:780px;}
+.faq-search{position:relative; flex:1; min-width:210px;}
+.faq-search svg{
+  position:absolute; left:13px; top:50%; transform:translateY(-50%); width:16px; height:16px;
+  color:var(--text-soft); pointer-events:none;
+}
+.faq-search input{
+  width:100%; padding:12px 13px 12px 38px; border-radius:10px; border:1px solid var(--border);
+  background:var(--surface); color:var(--text); font-size:14px; font-family:inherit; min-height:46px;
+}
+.faq-search input:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
+.faq-count{font-family:var(--font-mono); font-size:11.5px; color:var(--text-soft); margin-top:14px;}
+details.qa.hide{display:none;}
+mark{background:color-mix(in srgb, var(--accent) 35%, transparent); color:inherit; border-radius:2px; padding:0 2px;}
+
+/* ---------- Contact form extras ---------- */
+.field-err{color:var(--danger); font-size:12px; margin-top:5px; display:none;}
+.field.bad input, .field.bad textarea{border-color:var(--danger);}
+.field.bad .field-err{display:block;}
+.char-count{float:right; font-family:var(--font-mono); font-size:10.5px; color:var(--text-soft); font-weight:400;}
+.hp{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;}
+
+/* ---------- Support tickets ---------- */
+/* The form sits in a --surface panel rather than loose on the band, for the
+   same reason the pricing tiers don't sit on an .alt stripe: this section is
+   on plain --bg, so a raised card reads as a thing you fill in instead of
+   more page furniture. */
+.tkt-grid{display:grid; grid-template-columns:1.12fr .88fr; gap:30px; align-items:start;}
+.tkt-panel{
+  border:1px solid var(--border); border-radius:16px; background:var(--surface);
+  padding:26px 26px 24px; box-shadow:var(--shadow);
+}
+/* Two short fields per row on desktop — name/email and system/category are
+   pairs, and stacking six full-width inputs makes the panel a mile long. */
+.tkt-row{display:grid; grid-template-columns:1fr 1fr; gap:0 14px;}
+.tkt-block{border:none; margin:0 0 15px; padding:0;}
+.tkt-block legend{
+  font-size:13px; font-weight:600; color:var(--text-soft); padding:0; margin-bottom:8px;
+}
+/* Tighter than the shared .opt-grid: four priorities inside a panel
+   narrower than the page want to stay one row, not three-plus-a-widow. */
+#tkPriority{grid-template-columns:repeat(auto-fit,minmax(122px,1fr));}
+.tkt-target{
+  margin-top:10px; font-size:12.5px; color:var(--text-soft);
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.tkt-target b{font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:var(--accent);}
+.tkt-side{display:flex; flex-direction:column; gap:14px;}
+.tkt-card{border:1px solid var(--border); border-radius:14px; background:var(--surface); padding:18px 20px;}
+.tkt-card h4{font-size:14.5px; margin-bottom:12px;}
+.tkt-card p{font-size:13px; color:var(--text-soft); line-height:1.55;}
+/* Response targets. The row for whatever priority is selected in the form
+   lights up, so the two halves of the section stay visibly connected. */
+.sla-row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:9px 8px; margin:0 -8px; border-bottom:1px solid var(--border);
+  font-size:13px; border-radius:8px; transition:background .18s ease;
+}
+.sla-row:last-of-type{border-bottom:none;}
+.sla-row.on{background:var(--bg);}
+.sla-row.on .who b{color:var(--accent);}
+.sla-row .who{display:flex; align-items:center; gap:9px; min-width:0;}
+.sla-row .who b{font-size:13px;}
+.sla-row .who i{font-style:normal; color:var(--text-soft); font-size:12px;}
+.sla-row .val{font-family:var(--font-mono); font-size:12px; font-weight:700; flex:none;}
+.dotp{width:8px; height:8px; border-radius:50%; flex:none;}
+.dotp.low{background:var(--text-soft);}
+.dotp.medium{background:var(--accent);}
+.dotp.high{background:var(--burgundy-line);}
+.dotp.critical{background:var(--danger);}
+.sla-foot{margin-top:12px; font-size:11.5px !important; line-height:1.5;}
+/* Lifecycle rail — the five ticket statuses, in order, so what a client is
+   told here is what they'll see when we open the ticket on our side. If
+   those statuses ever change, this list is the copy that has to change with
+   them. */
+.life{list-style:none; margin:0; padding:0;}
+.life li{position:relative; padding:0 0 15px 30px; font-size:12.5px; color:var(--text-soft); line-height:1.5;}
+.life li:last-child{padding-bottom:0;}
+.life li::before{content:''; position:absolute; left:9px; top:20px; bottom:2px; width:1px; background:var(--border);}
+.life li:last-child::before{display:none;}
+.life .n{
+  position:absolute; left:0; top:1px; width:19px; height:19px; border-radius:50%;
+  border:1px solid var(--border); background:var(--bg); display:flex; align-items:center;
+  justify-content:center; font-family:var(--font-mono); font-size:9.5px; font-weight:700; color:var(--text-soft);
+}
+.life b{display:block; color:var(--text); font-size:13px; margin-bottom:2px;}
+
+/* ---------- Back to top + toast ---------- */
+.to-top{
+  position:fixed; right:20px; bottom:20px; z-index:60; width:46px; height:46px; border-radius:12px;
+  border:1px solid var(--border); background:var(--surface); color:var(--text-soft); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);
+  opacity:0; transform:translateY(12px); pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease, border-color .18s ease, color .18s ease;
+}
+.to-top.show{opacity:1; transform:none; pointer-events:auto;}
+.to-top:hover{border-color:var(--accent); color:var(--accent);}
+.to-top svg{width:18px; height:18px;}
+.toast{
+  position:fixed; left:50%; bottom:26px; transform:translate(-50%,20px); z-index:90;
+  background:var(--text); color:var(--bg); padding:12px 20px; border-radius:10px; font-size:13.5px;
+  font-weight:600; box-shadow:var(--shadow); opacity:0; pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease; max-width:calc(100vw - 40px); text-align:center;
+}
+.toast.show{opacity:1; transform:translate(-50%,0);}
+
+/* =====================================================================
+   3D — the whole depth system, in one place
+   Rules of the road, so this stays maintainable:
+     · CSS only. perspective + preserve-3d + translateZ. No canvas, no
+       library, nothing to vendor into a public no-account page.
+     · Any element that needs children at different depths must NOT have
+       overflow other than visible — overflow is a grouping property and
+       silently flattens preserve-3d. Where a component genuinely needs
+       clipping (work thumbnails, the console), only the element itself
+       is transformed and its children stay flat.
+     · Pointer-driven tilt is opt-in per group and only wired up when the
+       device actually has a pointer. Everything degrades to the v1 flat
+       look under prefers-reduced-motion or on touch.
+===================================================================== */
+
+/* Depth scale — one place to retune how far "forward" each layer sits. */
+:root{
+  --z-lift:14px;      /* a card lifting toward the cursor          */
+  --z-icon:34px;      /* icons and badges floating off a card face */
+  --z-head:20px;      /* headings, just above the face            */
+  --z-body:8px;       /* body copy, barely off the face           */
+  --tilt:7deg;        /* max pointer tilt for a card              */
+}
+
+/* ---------- Hero stage ---------- */
+.hero-3d{position:relative; perspective:1500px; perspective-origin:62% 38%;}
+.hero-stage{
+  position:relative; transform-style:preserve-3d;
+  transform:rotateX(var(--stx,3deg)) rotateY(var(--sty,-8deg));
+  transition:transform .55s cubic-bezier(.22,1,.36,1);
+}
+/* Idle drift whenever the cursor isn't driving it, so the panel is alive
+   before you touch it. Adding .live hands control to the pointer. */
+.hero-stage:not(.live){animation:heroDrift 11s ease-in-out infinite;}
+.hero-stage.live{transition:transform .14s ease-out;}
+/* Cursor has left: ease back to rest over half a second instead of tracking */
+.hero-stage.live.settle{transition:transform .55s cubic-bezier(.22,1,.36,1);}
+@keyframes heroDrift{
+  0%,100%{transform:rotateX(3deg) rotateY(-8deg) translate3d(0,0,0);}
+  50%    {transform:rotateX(1.2deg) rotateY(-4.5deg) translate3d(0,-9px,0);}
+}
+.hero-stage .console{position:relative; transform:translateZ(0); backface-visibility:hidden;}
+
+/* Satellite cards orbiting the console at different depths. Painting order
+   inside a preserve-3d parent follows Z, not z-index — the +Z ones land in
+   front of the console, the −Z one behind it, which is the whole point. */
+.float-card{
+  position:absolute; border:1px solid var(--border); background:var(--surface);
+  border-radius:12px; padding:11px 13px; box-shadow:var(--shadow); pointer-events:none;
+  font-family:var(--font-mono); backface-visibility:hidden;
+}
+.float-card .fk{
+  font-size:8.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--text-soft);
+  display:block; margin-bottom:4px;
+}
+.float-card .fv{font-size:14px; font-weight:700; display:flex; align-items:center; gap:7px;}
+.float-card .fv .dot{width:6px; height:6px; border-radius:50%; background:var(--ok); flex:none;}
+/* Positioned to overhang the console's corners rather than sit on top of it —
+   translateZ magnifies as well as advances, so a satellite nudged "just
+   inside" the panel edge ends up covering the panel's content. */
+.fc-a{top:-44px; right:-30px;  width:168px; transform:translateZ(66px) rotate(1.5deg);}
+.fc-b{bottom:-40px; left:-40px; width:190px; transform:translateZ(48px) rotate(-1.5deg);}
+
+/* Perspective floor — a receding grid plane that sells the depth of the
+   whole stage far more cheaply than shadows do. */
+/* Shallower than a "realistic" floor angle on purpose: past ~70deg the
+   horizontal lines compress into each other and the plane stops reading as
+   a plane — it just looks like stray marks behind the panel. */
+.stage-floor{
+  position:absolute; left:-12%; right:-12%; bottom:-104px; height:250px; pointer-events:none;
+  transform-origin:50% 0; transform:rotateX(62deg) translateZ(-40px);
+  background:
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent) 0 1px, transparent 1px 38px),
+    repeating-linear-gradient(0deg,  color-mix(in srgb, var(--accent) 45%, transparent) 0 1px, transparent 1px 30px);
+  -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.9), transparent 62%);
+          mask-image:linear-gradient(to bottom, rgba(0,0,0,.9), transparent 62%);
+}
+
+/* ---------- Card tilt (services, tiers) ---------- */
+.cards, .tiers{perspective:1600px;}
+
+/* Five service cards in an auto-fit grid land as 4 + 1 orphan. Laid out on a
+   six-column track instead they read as the deliberate split they are: the
+   web trio on top, the two IT services beneath at wider measure. */
+@media (min-width:961px){
+  #serviceCards{grid-template-columns:repeat(6,1fr);}
+  #serviceCards > .card{grid-column:span 2;}
+  #serviceCards > .card:nth-child(n+4){grid-column:span 3;}
+}
+.card, .tier{transform-style:preserve-3d;}
+.card.tilted, .tier.tilted{
+  transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateZ(var(--z-lift));
+  transition:transform .1s ease-out, box-shadow .2s ease, border-color .2s ease;
+  box-shadow:0 26px 60px rgba(0,0,0,.22), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+/* The lifted layers. Kept to icon / heading / list so text bodies stay on
+   the face and never render soft mid-tilt. */
+.card .card-ico{transform:translateZ(var(--z-icon));}
+.card h3{transform:translateZ(var(--z-head));}
+.card ul, .card p{transform:translateZ(var(--z-body));}
+.tier .amt{transform:translateZ(var(--z-icon));}
+.tier h3, .tier .tier-flag{transform:translateZ(var(--z-head));}
+.tier ul{transform:translateZ(var(--z-body));}
+
+/* Work cards clip their thumbnail, so they tilt as a single flat plane —
+   no inner depth, which keeps preserve-3d out of an overflow:hidden box. */
+.work-grid{perspective:1600px;}
+.work-card.tilted{
+  transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateZ(10px);
+  transition:transform .1s ease-out, box-shadow .2s ease, border-color .2s ease;
+}
+
+/* ---------- The MOS cube ----------
+   Six faces, one per thing we promise about security. Real 3D: each face
+   is a plane pushed out half the cube's width and rotated into position. */
+.cube-wrap{
+  position:relative;
+  perspective:1000px; display:flex; align-items:center; justify-content:center;
+  min-height:320px; padding:20px 0;
+}
+.cube{
+  position:relative; width:186px; height:186px; transform-style:preserve-3d;
+  animation:cubeSpin 30s linear infinite;
+}
+.cube-wrap:hover .cube{animation-play-state:paused;}
+@keyframes cubeSpin{
+  from{transform:rotateX(-20deg) rotateY(0deg);}
+  to  {transform:rotateX(-20deg) rotateY(360deg);}
+}
+.cube .face{
+  position:absolute; inset:0; display:flex; flex-direction:column; gap:7px;
+  align-items:center; justify-content:center; text-align:center; padding:14px;
+  border:1.5px solid color-mix(in srgb, var(--accent) 62%, transparent); border-radius:12px;
+  /* Tinted rather than plain --surface: on the light palette a white face on
+     an off-white section is a rectangle you have to hunt for. Semi-opaque so
+     the far faces read through and the thing looks like a solid, not a card. */
+  background:color-mix(in srgb, var(--accent) 13%, var(--surface));
+  opacity:.96;
+  box-shadow:inset 0 0 34px color-mix(in srgb, var(--accent) 22%, transparent);
+  /* Cull the far side of every face. Without this the rear faces show
+     through the translucent front ones as mirrored, upside-down text
+     ghosts, which reads as a rendering fault rather than as glass. */
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+}
+.cube .face svg{width:24px; height:24px; color:var(--accent);}
+.cube .face b{font-family:var(--font-display); font-size:14px; letter-spacing:-.01em;}
+.cube .face span{font-family:var(--font-mono); font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:var(--text-soft);}
+/* Only the four side faces carry words. The caps are textured instead: the
+   cube spins on Y under a fixed X tilt, so the top face is permanently in
+   view — and a labelled face seen from above renders its text upside down. */
+.cube .cap{
+  background:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--accent) 30%, transparent) 0 1px, transparent 1px 11px),
+    color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+.cube .f1{transform:translateZ(93px);}
+.cube .f2{transform:rotateY(90deg)  translateZ(93px);}
+.cube .f3{transform:rotateY(180deg) translateZ(93px);}
+.cube .f4{transform:rotateY(-90deg) translateZ(93px);}
+.cube .f5{transform:rotateX(90deg)  translateZ(93px);}
+.cube .f6{transform:rotateX(-90deg) translateZ(93px);}
+/* Glow pooled under the cube so it reads as sitting in space, not pasted on */
+.cube-wrap::after{
+  content:''; position:absolute; width:220px; height:220px; border-radius:50%; z-index:-1;
+  background:radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 68%);
+  filter:blur(8px);
+}
+.cube-hint{
+  position:absolute; bottom:0; left:0; right:0; text-align:center;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--text-soft);
+}
+
+/* ---------- Reveal, now with depth ----------
+   v1 faded rows up the Y axis. v2 stands them up out of the page instead —
+   same observer, same class, one extra rotateX. It resolves to
+   transform:none, so nothing is left mid-transform to render soft. */
+.rv{transform:perspective(1000px) translateY(18px) rotateX(6deg); transform-origin:50% 100%;}
+
+/* Process panel swaps flip in on the X axis rather than sliding */
+.flip-swap{animation:flipIn .46s cubic-bezier(.22,1,.36,1);}
+@keyframes flipIn{
+  from{opacity:0; transform:perspective(1300px) rotateX(-16deg) translateY(12px);}
+  to  {opacity:1; transform:none;}
+}
+
+/* Brand mark: the three bars get actual thickness on hover */
+.brand-lockup{perspective:600px;}
+.brand-mark{transform-style:preserve-3d; transition:transform .4s cubic-bezier(.22,1,.36,1);}
+.brand-lockup:hover .brand-mark{transform:rotateY(-26deg) rotateX(8deg);}
+.brand-mark .bar{transition:transform .4s cubic-bezier(.22,1,.36,1);}
+.brand-lockup:hover .b1{transform:translateZ(4px);}
+.brand-lockup:hover .b2{transform:translateZ(9px);}
+.brand-lockup:hover .b3{transform:translateZ(14px);}
+
+/* =====================================================================
+   NAV v3 — the bar as an instrument
+   The nav shipped as a row of links with a progress hairline under it.
+   Everything in this block turns it into something you operate rather
+   than just read:
+     · a lit pill that slides between links, following the pointer and
+       parking on the section you're in — hover feedback and "where am
+       I" become one object instead of two competing highlights;
+     · chapter ticks along the progress hairline, each drawn at the
+       scroll position its section starts at, so the line doubles as the
+       page's table of contents;
+     · a bar that condenses once you leave the top;
+     · a command palette on Ctrl/⌘K that searches the page's own
+       content — sections, services, plans, case studies, questions.
+   Same rules as the 3D block above: pointer-driven behaviour is opt-in
+   and gated on a real pointer, and everything degrades to the plain v1
+   bar under prefers-reduced-motion or on touch.
+===================================================================== */
+
+/* ---------- Condense on scroll ----------
+   Only the bar's own height moves. --nav-h stays put because the whole
+   page's anchor landing maths (scroll-padding-top, .section's negative
+   scroll-margin, .hero's top padding) is written against it — retuning
+   that on every scroll would make anchor jumps land differently
+   depending on how far down the page you happened to be. */
+.nav{transition:background .2s ease, height .3s cubic-bezier(.22,1,.36,1);}
+.nav.scrolled{height:56px;}
+.brand-title{transition:font-size .3s cubic-bezier(.22,1,.36,1);}
+.nav.scrolled .brand-title{font-size:17px;}
+.brand-mark{transition:transform .4s cubic-bezier(.22,1,.36,1), height .3s cubic-bezier(.22,1,.36,1);}
+.nav.scrolled .brand-mark{height:19px;}
+
+/* ---------- The lit pill ----------
+   One element that moves, rather than a background on each link: a pill
+   that travels reads as the same object following you along the row,
+   and it lets hover and the current section share a highlight instead
+   of lighting two links at once. */
+/* 2px rather than v1's 4px. With the links this row carries, the wider gap
+   made the row wider than .wrap's content box, which put the CTA's right
+   edge into the page gutter — out of line with every section's right edge
+   below it. The pill does the separating now anyway. */
+.nav-links{position:relative; gap:2px;}
+/* nowrap, and the row may not be compressed: without these a row that is
+   a few pixels too wide silently resolves itself by breaking "Get
+   started" over two lines, which looks like a layout bug and — worse —
+   hides the fact that the row no longer fits from anything measuring it. */
+.nav-links{flex:none;}
+.nav-links a{white-space:nowrap;}
+.nav-glow{
+  position:absolute; top:50%; left:0; height:34px; margin-top:-17px; border-radius:9px;
+  width:var(--gw,0px); transform:translate3d(var(--gx,0px),0,0);
+  background:color-mix(in srgb, var(--accent) 13%, transparent);
+  border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  opacity:0; pointer-events:none;
+  transition:transform .36s cubic-bezier(.22,1,.36,1), width .36s cubic-bezier(.22,1,.36,1),
+             opacity .22s ease;
+}
+.nav-links.lit .nav-glow{opacity:1;}
+.nav-links a{z-index:1;}
+/* v1's grey hover block would sit on top of the pill and cancel it out.
+   The dropdown keeps it — down there the pill is hidden and the block is
+   the only hover feedback there is. */
+@media (min-width:1021px){
+  .nav-links a:hover{background:transparent;}
+}
+
+/* ---------- Chapter ticks ----------
+   Pointer affordance only, hence aria-hidden and no tab stop: every one
+   of these destinations is already a nav link or a palette result, and a
+   second set of twelve tab stops in the bar would be a tax on keyboard
+   users rather than a feature. Think scrollbar, not navigation. */
+.chap-rail{
+  position:absolute; left:0; right:0; bottom:0; height:12px; z-index:2;
+  opacity:0; pointer-events:none; transition:opacity .25s ease;
+}
+/* Only the ticks take clicks. The rail itself is a full-width invisible
+   12px strip at z-index 2, so giving *it* pointer-events swallowed the
+   bottom few pixels of the search button, theme toggle and CTA sitting
+   behind it. */
+.nav.scrolled .chap-rail{opacity:1;}
+.chap{
+  position:absolute; bottom:0; left:var(--x,0%); width:16px; height:12px; margin-left:-8px;
+  display:flex; align-items:flex-end; justify-content:center; cursor:pointer;
+  pointer-events:none;
+}
+.nav.scrolled .chap{pointer-events:auto;}
+.chap::after{
+  content:''; width:2px; height:5px; border-radius:1px 1px 0 0;
+  background:color-mix(in srgb, var(--text-soft) 55%, transparent);
+  transition:height .18s ease, background .18s ease;
+}
+.chap.on::after{background:var(--accent); height:8px;}
+.chap:hover::after{background:var(--accent); height:11px;}
+/* Hangs below the bar, not above it. Above, it lands squarely on the link
+   row — the label for the tick you're pointing at covers the two links
+   either side of it, which is worse than no label. Below, it sits over
+   page content the way a scrollbar tooltip does and collides with
+   nothing. The nav sets no overflow, so it is free to escape. */
+.chap-lab{
+  position:absolute; top:100%; margin-top:7px; left:50%; transform:translate(-50%,-4px);
+  white-space:nowrap;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--accent); background:var(--surface); border:1px solid var(--border);
+  border-radius:7px; padding:4px 9px; box-shadow:var(--shadow);
+  opacity:0; pointer-events:none; transition:opacity .16s ease, transform .16s ease;
+}
+.chap:hover .chap-lab{opacity:1; transform:translate(-50%,0);}
+/* The first and last ticks sit on the viewport edges, where a centred
+   label would hang off the page. Pin those two by their near edge. */
+.chap.at-start .chap-lab{left:0; transform:translate(0,-4px);}
+.chap.at-start:hover .chap-lab{transform:translate(0,0);}
+.chap.at-end .chap-lab{left:auto; right:0; transform:translate(0,-4px);}
+.chap.at-end:hover .chap-lab{transform:translate(0,0);}
+
+/* ---------- Where you are, for the collapsed widths ---------- */
+.nav-here{
+  display:none; align-items:center; gap:8px; min-width:0; overflow:hidden;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--text-soft); white-space:nowrap; text-overflow:ellipsis;
+}
+.nav-here::before{content:'/'; color:var(--border);}
+.nav-here.swap{animation:hereIn .3s ease;}
+@keyframes hereIn{from{opacity:0; transform:translateY(5px);}}
+
+/* ---------- Magnetic CTA ----------
+   The button leans a few pixels toward the cursor before you reach it.
+   --mx/--my are set from JS; the resting state and the hover lift are
+   expressed on top of them so neither cancels the other. */
+.nav-cta{
+  transform:translate3d(var(--mx,0px), var(--my,0px), 0);
+  transition:transform .18s cubic-bezier(.22,1,.36,1), filter .15s ease, box-shadow .15s ease;
+  /* Same reasoning as .nav-links above, for the same reason: .nav-links is
+     flex:none, so any overflow in the row lands here instead — and this was
+     the one flex child left able to absorb it by wrapping its own label. */
+  flex:none; white-space:nowrap;
+}
+.nav-cta:hover{transform:translate3d(var(--mx,0px), calc(var(--my,0px) - 1px), 0);}
+/* The full phrase is the label everywhere there is room for it; the short
+   one is swapped in by the phone breakpoint near the bottom of the file. */
+.nav-cta .cta-short{display:none;}
+
+/* ---------- Search button ---------- */
+.nav-find{
+  display:inline-flex; align-items:center; gap:8px; height:44px; padding:0 12px; flex:none;
+  border:1px solid var(--border); border-radius:8px; background:none; color:var(--text-soft);
+  font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  transition:border-color .15s ease, color .15s ease, transform .15s ease;
+}
+.nav-find:hover{border-color:var(--accent); color:var(--accent); transform:translateY(-1px);}
+.nav-find svg{width:16px; height:16px; flex:none;}
+kbd{
+  font-family:var(--font-mono); font-size:10px; line-height:1.5; border:1px solid var(--border);
+  border-bottom-width:2px; border-radius:5px; padding:1px 5px; background:var(--surface);
+  color:var(--text-soft); white-space:nowrap;
+}
+
+/* ---------- Command palette ---------- */
+.pal-root{
+  position:fixed; inset:0; z-index:95; display:flex; align-items:flex-start; justify-content:center;
+  padding:11vh 20px 20px;
+}
+.pal-root[hidden]{display:none;}
+.pal-back{position:absolute; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(3px); animation:fade .2s ease;}
+.pal-panel{
+  position:relative; width:min(620px,100%); max-height:min(560px,76vh); display:flex; flex-direction:column;
+  background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;
+  box-shadow:var(--shadow); animation:pop .22s cubic-bezier(.4,0,.2,1);
+}
+.pal-top{display:flex; align-items:center; gap:11px; padding:15px 16px; border-bottom:1px solid var(--border);}
+.pal-top svg{width:18px; height:18px; color:var(--accent); flex:none;}
+.pal-top input{
+  flex:1; min-width:0; border:0; background:none; outline:none; color:var(--text);
+  font-family:inherit; font-size:15px;
+}
+.pal-list{flex:1; overflow-y:auto; padding:8px; scroll-padding:8px;}
+.pal-group{
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--text-soft); padding:11px 10px 5px;
+}
+.pal-item{
+  display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:9px 10px;
+  border:0; border-radius:9px; background:none; cursor:pointer; font-family:inherit;
+  color:var(--text); font-size:14px;
+}
+.pi-ico{
+  width:27px; height:27px; border-radius:7px; flex:none; display:flex; align-items:center;
+  justify-content:center; background:var(--accent-soft); color:var(--accent);
+}
+.pi-ico svg{width:14px; height:14px;}
+.pi-txt{min-width:0; flex:1;}
+.pi-t, .pi-s{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.pi-s{font-size:11.5px; color:var(--text-soft);}
+.pi-go{margin-left:auto; font-family:var(--font-mono); font-size:10px; color:var(--accent); opacity:0; flex:none;}
+/* Selection is painted on aria-selected rather than :hover so the mouse
+   and the arrow keys can never disagree about which row is live. */
+.pal-item[aria-selected="true"]{
+  background:var(--bg); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.pal-item[aria-selected="true"] .pi-go{opacity:1;}
+.pal-empty{padding:28px 16px; text-align:center; color:var(--text-soft); font-size:13.5px;}
+.pal-foot{
+  display:flex; gap:14px; flex-wrap:wrap; padding:10px 16px; border-top:1px solid var(--border);
+  background:var(--bg); font-size:11px; color:var(--text-soft);
+}
+.pal-foot span{display:inline-flex; align-items:center; gap:5px;}
+
+/* ---------- Arrival flash ----------
+   A jump that moves the page 3000px gives no clue whether you landed
+   where you asked. One pulse on the thing you asked for answers that.
+   Painted with an inset shadow rather than a pseudo-element because
+   .hero already spends its ::before on the brand wash. */
+.jumped{animation:jumpEdge 1.05s ease;}
+@keyframes jumpEdge{
+  0%  {box-shadow:inset 0 3px 0 -1px var(--accent), inset 0 26px 30px -30px var(--accent);}
+  100%{box-shadow:inset 0 3px 0 -1px transparent, inset 0 26px 30px -30px transparent;}
+}
+.jumped-el{animation:jumpRing 1.15s ease;}
+@keyframes jumpRing{
+  0%,100%{box-shadow:0 0 0 0 transparent;}
+  22%    {box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent);}
+  60%    {box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);}
+}
+
+/* ---------- Responsive + reduced motion ---------- */
+@media (min-width:721px) and (max-width:1020px){
+  /* The link row is behind the hamburger here, so the pill has nowhere to
+     say where you are. The breadcrumb takes over the job. */
+  .nav-here[data-on="1"]{display:flex;}
+}
+/* Three stages, and the widths are measured rather than picked. .wrap caps
+   the bar's content at 1140px no matter how wide the window gets, so the
+   row's budget is fixed — a wider screen buys nothing. Inside that budget
+   the full row (brand, the links, the search button with its shortcut,
+   the theme toggle, the CTA) leaves room to spare. Below 1180 the shortcut
+   goes and the links tighten their padding, which carries the row down to
+   the fold at 1020. */
+@media (max-width:1179px){
+  .nav-find{width:44px; padding:0; justify-content:center;}
+  .nav-find kbd{display:none;}
+  .nav-links a{padding:8px 9px;}
+}
+/* The fold. Below this the row has nothing left to give and the CTA
+   would start walking off the right-hand edge. */
+@media (max-width:1020px){
+  .nav-links{
+    display:none; position:absolute; top:100%; left:0; right:0; flex-direction:column;
+    align-items:stretch; background:var(--surface); border-bottom:1px solid var(--border);
+    padding:10px; gap:2px; box-shadow:var(--shadow);
+  }
+  .nav-links.open{display:flex;}
+  .nav-links a{padding:13px 14px; min-height:46px; display:flex; align-items:center;}
+  .nav-toggle{display:inline-flex;}
+  .nav-glow{display:none;}
+  /* Dropdown items arrive in sequence rather than as one block. */
+  .nav-links.open a{animation:navItemIn .34s cubic-bezier(.22,1,.36,1) both; animation-delay:calc(var(--i,0) * 34ms);}
+}
+@keyframes navItemIn{from{opacity:0; transform:translateY(-9px);}}
+@media (max-width:720px){
+  /* Phone widths can't spare 52px for it beside the brand, the theme
+     toggle, the hamburger and the CTA. Ctrl/⌘K still opens the palette
+     for anyone with a keyboard attached. */
+  .nav-find{display:none;}
+  .pal-root{padding:0; align-items:flex-end;}
+  .pal-panel{width:100%; max-height:88vh; border-radius:16px 16px 0 0;}
+}
+/* The language button is a fourth control in a row that, at 375px, used to
+   end exactly on the right-hand edge with nothing to spare — the CTA's
+   last letter sat on the last pixel. Everything here is that button's
+   52px paid back out of slack the row wasn't using: a tighter gutter on
+   the bar alone (the sections below keep their 24px), tighter gaps, and
+   icon buttons at 40px, which is still a comfortable target and the size
+   the row would have used all along if 44 hadn't fitted. Nothing is
+   hidden and nothing moves into a menu: on a phone the two-letter button
+   is the only thing telling a French speaker this page has a French side,
+   so it has to stay where they can see it. */
+@media (max-width:560px){
+  .nav .wrap{gap:10px; padding:0 16px;}
+  .nav-actions{gap:6px; margin-left:0;}
+  .icon-btn{width:40px; height:40px;}
+  .nav-cta{padding:11px 15px;}
+  .nav-cta .cta-full{display:none;}
+  .nav-cta .cta-short{display:inline;}
+}
+/* Ticks are a hover affordance; without hover they are twelve 16px
+   targets crowded into a phone's width, which is a trap, not a menu. */
+@media (hover:none){ .chap-rail{display:none;} }
+@media (prefers-reduced-motion:reduce){
+  /* !important because the blanket `* { transition:none !important }`
+     further down this file would otherwise win and kill these two as well.
+     They are kept on purpose: a background tint and an opacity fade are
+     colour changes, not movement, and they are what tells you the nav has
+     gone solid over the page. */
+  .nav{transition:background .2s ease !important;}
+  .nav-glow{transition:opacity .22s ease !important;}
+  .nav-cta{transform:none !important;}
+  .nav-links.open a{animation:none;}
+  .nav-here.swap{animation:none;}
+  .jumped, .jumped-el{animation:none;}
+  .pal-panel, .pal-back{animation:none;}
+}
+
+/* =====================================================================
+   NEW SECTIONS — security
+===================================================================== */
+
+/* ---------- Security ---------- */
+.sec-grid{display:grid; grid-template-columns:.85fr 1.15fr; gap:44px; align-items:center;}
+.sec-list{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.sec-item{
+  border:1px solid var(--border); border-radius:12px; padding:16px 17px; background:var(--surface);
+  transition:border-color .2s ease, transform .2s ease;
+}
+.sec-item:hover{border-color:var(--accent); transform:translateY(-2px);}
+.sec-item .st{display:flex; align-items:center; gap:9px; margin-bottom:6px;}
+.sec-item svg{width:17px; height:17px; color:var(--accent); flex:none;}
+.sec-item b{font-family:var(--font-display); font-size:14px;}
+.sec-item p{font-size:12.5px; color:var(--text-soft); line-height:1.5;}
+.sec-note{
+  margin-top:26px; border:1px solid var(--border); border-left:3px solid var(--accent);
+  border-radius:0 12px 12px 0; padding:16px 20px; background:var(--surface);
+  font-size:13.5px; color:var(--text-soft); line-height:1.6;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width:960px){
+  .sec-grid{grid-template-columns:1fr; gap:28px;}
+  /* Below the hero's single-column breakpoint the satellites have nowhere
+     to sit without overlapping the console, and a tilted panel on a narrow
+     screen just looks skewed. Flatten the whole stage instead. */
+  .hero-stage{transform:none !important; animation:none !important;}
+  .float-card, .stage-floor{display:none;}
+}
+@media (max-width:720px){
+  .sec-list{grid-template-columns:1fr;}
+  .cube-wrap{min-height:230px;}
+  .cube{width:130px; height:130px;}
+  .cube .f1{transform:translateZ(65px);}
+  .cube .f2{transform:rotateY(90deg)  translateZ(65px);}
+  .cube .f3{transform:rotateY(180deg) translateZ(65px);}
+  .cube .f4{transform:rotateY(-90deg) translateZ(65px);}
+  .cube .f5{transform:rotateX(90deg)  translateZ(65px);}
+  .cube .f6{transform:rotateX(-90deg) translateZ(65px);}
+}
+
+/* ---------- Responsive (v1) ---------- */
+@media (max-width:960px){
+  .hero-grid{grid-template-columns:1fr; gap:44px;}
+  .contact-grid{grid-template-columns:1fr; gap:32px;}
+  .steps{grid-template-columns:1fr 1fr; gap:32px 0;}
+  .steps::before{display:none;}
+  .step-panel{grid-template-columns:1fr; gap:22px; padding:24px;}
+  /* Ticket form first, targets and lifecycle under it — the reference
+     material is what you read while filling the form in, not before it. */
+  .tkt-grid{grid-template-columns:1fr; gap:22px;}
+}
+@media (max-width:720px){
+  /* Drives .section's padding and its anchor scroll-margin together. */
+  :root{--sect-pad:68px;}
+  .hero{padding:calc(var(--nav-h) + 52px) 0 60px;}
+  .card-detail{grid-template-columns:1fr;}
+  /* Keep the four console stats on one row on phones — wrapping them adds a
+     whole extra band of height to the panel. */
+  .console-stat{min-width:70px; padding:11px 12px;}
+  .console-stat .v{font-size:17px;}
+  .work-grid{grid-template-columns:1fr;}
+  .modal-root{padding:0; align-items:flex-end;}
+  .modal-panel{max-height:92vh; border-radius:16px 16px 0 0; width:100%;}
+  .to-top{right:14px; bottom:14px;}
+  .steps{grid-template-columns:1fr;}
+  .foot-grid{flex-direction:column; gap:22px;}
+  .tkt-panel{padding:20px 18px 18px;}
+  .tkt-row{grid-template-columns:1fr;}
+}
+
+/* Motion-sensitivity: kill transforms/animation, keep everything visible.
+   For v2 that also means collapsing the depth system — the cube stops
+   spinning and shows one face, the hero stage sits square, and nothing
+   tilts under the cursor. The page loses its dimension, not its content. */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  /* ::before and ::after are named explicitly — the universal selector does
+     not match them, and several cues on this page (the cube hint, the nav
+     underline, the card's top rule) animate entirely on a pseudo-element,
+     so `*` alone left them moving after everything else had stopped. */
+  *, *::before, *::after{
+    transition:none !important;
+    animation:none !important;
+    scroll-behavior:auto !important;
+  }
+  .rv{opacity:1; transform:none;}
+  #heatLayer{display:none;}
+  .hero-stage{transform:none !important;}
+  .float-card, .stage-floor{display:none;}
+  .card.tilted, .tier.tilted, .work-card.tilted{transform:none !important;}
+  .card .card-ico, .card h3, .card ul, .card p,
+  .tier .amt, .tier h3, .tier .tier-flag, .tier ul{transform:none !important;}
+  /* Flatten the cube to its front face rather than leaving six panes
+     stacked in a heap where the animation stopped. */
+  .cube{transform:none !important;}
+  .cube .face{position:relative; inset:auto; transform:none !important; display:none;}
+  .cube .f1{display:flex;}
+  .cube-wrap::after, .cube-hint{display:none;}
+  .brand-lockup:hover .brand-mark,
+  .brand-lockup:hover .b1, .brand-lockup:hover .b2, .brand-lockup:hover .b3{transform:none;}
+}
+</style>
+
+<!-- Without JavaScript, everything marked .rv stays at opacity:0 forever:
+     the reveal is an IntersectionObserver adding .in as each block scrolls
+     up, and with no script there is nothing to add it. 79 elements on this
+     page carry it, the <h1> among them, so the page would load with its
+     text present in the markup and most of it invisible on screen — the
+     worst of both, since a crawler reads a full page and a person sees a
+     mostly blank one.
+
+     Same rule the prefers-reduced-motion block above already applies, for
+     the same reason: when the animation cannot or should not run, the
+     finished state is the correct state. -->
+<noscript><style>
+  .rv{opacity:1 !important; transform:none !important;}
+</style></noscript>
+</head>
+<body>
+
+<div id="heatLayer" aria-hidden="true"></div>
+
+<!-- ===================== NAV ===================== -->
+<nav class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand-lockup" href="#top" aria-label="MOS home">
+      <span class="brand-mark" aria-hidden="true">
+        <span class="bar b1"></span><span class="bar b2"></span><span class="bar b3"></span>
+      </span>
+      <span class="brand-title">MOS</span>
+    </a>
+
+    <!-- Reads "/ PRICING" at the widths where the link row is folded into
+         the hamburger and the lit pill has nowhere to show it. Decorative:
+         the same fact is in the URL bar and announced by the headings. -->
+    <span class="nav-here" id="navHere" aria-hidden="true"></span>
+
+    <div class="nav-links" id="navLinks">
+      <!-- The travelling highlight. Sits behind the links (they carry
+           z-index:1) and is positioned entirely from JS. -->
+      <span class="nav-glow" id="navGlow" aria-hidden="true"></span>
+      <a href="#services">Services</a>
+      <a href="#work">Work</a>
+      <a href="#process">Process</a>
+      <a href="#security">Security</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="#support">Support</a>
+      <!-- Same anchor as the "Start a project" button to its right. The button
+           is the CTA; this is the map — someone scanning the nav for where the
+           enquiry form lives shouldn't have to work out that a button labelled
+           differently is the way in. It also brings #contact into the
+           scroll-spy, so the nav stays lit on the last section of the page. -->
+      <a href="#contact">Get started</a>
+      <!-- Every link in this row is an in-page anchor. Nothing here leaves
+           the page, and nothing here points at the MOS platform — see the
+           STANDALONE note at the top of the file. -->
+    </div>
+
+    <div class="nav-actions">
+      <!-- Magnifier plus the shortcut, and no "Search" caption: the row has
+           no room for the word (see the breakpoint note in the CSS), and of
+           the two the shortcut is the half worth printing — it teaches
+           something the icon can't. The name lives on aria-label/title. -->
+      <button class="nav-find" id="paletteBtn" type="button" aria-label="Search this page" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <kbd id="paletteHint">Ctrl K</kbd>
+      </button>
+      <button class="icon-btn nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <button class="icon-btn" id="themeBtn" aria-label="Toggle light or dark theme" title="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+      <!-- Two letters rather than a globe icon: a globe says "there are
+           other languages" and nothing about which one you'd get, which is
+           the only thing anybody wants to know before pressing it. The
+           label is the language the button takes you TO — "FR" while the
+           page is in English — because a button reading "EN" on an English
+           page reads as a status light, not a control.
+
+           data-no-i18n keeps the page-wide translation pass off it: the
+           label, the title and the aria-label are set from JS on every
+           switch, and a pass that rewrote them underneath would leave the
+           button describing the language you just left. Markup here is the
+           English state, which is what a visitor sees before site.js has
+           had a chance to run. -->
+      <button class="icon-btn lang-btn" id="langBtn" type="button" data-no-i18n
+              aria-label="Read this page in French" title="Français">FR</button>
+      <!-- Two labels, one link. Below 560px the bar has a brand and four
+           controls to fit into a phone's width, and this phrase is the
+           only thing in the row long enough to give anything up — more so
+           in French, where "Démarrer un projet" runs 30px wider than the
+           English. The short form only ever shows at widths where the
+           hero's own full-size button is one screen away and the folded
+           menu carries the same link, so the offer is never the thing
+           that got cut. -->
+      <a class="btn btn-primary nav-cta" href="#contact"><span class="cta-full">Start a project</span><span class="cta-short">Start</span></a>
+    </div>
+  </div>
+  <div id="scrollTrack" aria-hidden="true"><div id="scrollProgress"></div></div>
+  <!-- Chapter ticks, built from the page's own sections at runtime. -->
+  <div class="chap-rail" id="chapRail" aria-hidden="true"></div>
+</nav>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow rv">Websites · Hosting · IT support · Repairs</div>
+        <h1 class="rv">We build it, host it, and <span class="hl">keep the whole lot running</span>.</h1>
+        <p class="hero-sub rv">
+          Most agencies hand over a folder of files and disappear. We design and build your
+          website or web platform, host it, watch it, patch it — and handle the rest of your IT
+          while we're at it, down to the machine on the desk. One team, one invoice, nobody
+          pointing at anybody else.
+        </p>
+        <div class="hero-cta rv">
+          <a class="btn btn-primary btn-lg" href="#contact">Start a project</a>
+          <a class="btn btn-ghost btn-lg" href="#pricing">See pricing</a>
+        </div>
+        <div class="hero-note rv">
+          <span class="dot" aria-hidden="true"></span>
+          Currently taking on new builds and support contracts — typical first reply within one business day.
+        </div>
+      </div>
+
+      <!-- Product-flavoured panel — an operable demo of the client console, not
+           live data. It used to be aria-hidden decoration; now that it has
+           tabs and expandable rows it has to be reachable, so it's labelled as
+           a demo instead and every control is a real button. The sample data
+           lives in CONSOLE_DEMO in site.js.
+
+           v2 sets it in a 3D stage: the console keeps its own markup and
+           behaviour untouched, and everything around it (satellites, floor,
+           tilt) is decoration bolted to the parent. -->
+      <div class="hero-3d rv" id="hero3d">
+       <div class="hero-stage" id="heroStage">
+
+        <div class="stage-floor" aria-hidden="true"></div>
+
+        <div class="float-card fc-a" aria-hidden="true">
+          <span class="fk">Response time</span>
+          <span class="fv"><span class="dot"></span>142 ms</span>
+        </div>
+        <div class="float-card fc-b" aria-hidden="true">
+          <span class="fk">Ticket #4471 · resolved</span>
+          <span class="fv">18 min</span>
+        </div>
+        <div class="console" role="group" aria-label="Demo of the client console — sample data, not live status">
+        <div class="console-bar">
+          <span class="console-dot" style="background:#FF5F57;"></span>
+          <span class="console-dot" style="background:#FEBC2E;"></span>
+          <span class="console-dot" style="background:#28C840;"></span>
+          <span class="console-title">client console</span>
+          <span class="demo-flag">Demo</span>
+        </div>
+        <div class="console-strip">
+          <div class="console-stat"><span class="k">Sites</span><span class="v" data-count="18">0</span></div>
+          <div class="console-stat"><span class="k">Uptime</span><span class="v ok" data-count="99.9" data-dec="1" data-suffix="%">0</span></div>
+          <div class="console-stat"><span class="k">Open</span><span class="v amber" data-count="2">0</span></div>
+          <div class="console-stat"><span class="k">Overdue</span><span class="v">0</span></div>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Console sections">
+          <button class="tab" role="tab" id="tabSites" aria-controls="panelSites" aria-selected="true">Sites</button>
+          <button class="tab" role="tab" id="tabIncidents" aria-controls="panelIncidents" aria-selected="false" tabindex="-1">Incidents</button>
+          <button class="tab" role="tab" id="tabInvoices" aria-controls="panelInvoices" aria-selected="false" tabindex="-1">Invoices</button>
+        </div>
+        <div class="console-rows" role="tabpanel" id="panelSites" aria-labelledby="tabSites"></div>
+        <div class="console-list" role="tabpanel" id="panelIncidents" aria-labelledby="tabIncidents" hidden></div>
+        <div class="console-list" role="tabpanel" id="panelInvoices" aria-labelledby="tabInvoices" hidden></div>
+        <div class="console-spark" id="spark" aria-hidden="true"></div>
+        </div><!-- /console -->
+
+       </div><!-- /hero-stage -->
+      </div><!-- /hero-3d -->
+    </div>
+  </div>
+</header>
+
+<!-- ===================== TRUST STRIP ===================== -->
+<section class="trust">
+  <div class="wrap">
+    <span class="lbl">Every plan includes</span>
+    <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3Z"/><path d="M9 12l2 2 4-4.5"/></svg>TLS &amp; daily backups</span>
+    <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Uptime monitoring</span>
+    <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-4-1L3 20l1.2-4.5A8.4 8.4 0 0 1 3 11.5 8.5 8.5 0 0 1 11.5 3 8.5 8.5 0 0 1 21 11.5Z"/></svg>Real human support</span>
+    <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>Your own client portal</span>
+  </div>
+</section>
+
+<!-- ===================== SERVICES ===================== -->
+<section class="section" id="services">
+  <div class="wrap">
+    <div class="section-head rv">
+      <div class="eyebrow">What we do</div>
+      <h2>Five services, one place</h2>
+      <p>The web work is where most people start. The support and repair side is why they stop
+        keeping three suppliers' numbers in a drawer. Take one piece or the whole lot — it's the
+        same team either way.</p>
+    </div>
+
+    <div class="cards" id="serviceCards">
+      <article class="card rv">
+        <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16l4 4v13.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 20.5v-16Z"/><path d="M16 3v4h4M8 12h8M8 16h5"/></svg></div>
+        <h3>Website design &amp; build</h3>
+        <p>Brochure sites, booking flows, content-managed marketing sites. Designed around what
+          your customers actually came to do, not what looked good in a template.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Responsive down to small phones</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Accessibility built in, not bolted on</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>You own the code and the domain</li>
+        </ul>
+        <button class="card-more" type="button" aria-expanded="false" aria-controls="svc1">Details<span class="chev" aria-hidden="true"></span></button>
+        <div class="card-detail" id="svc1" hidden>
+          <div><span>Typical build</span><b>2–4 weeks</b></div>
+          <div><span>From</span><b>$2,400</b></div>
+          <div class="full">Sitemap and copy deck agreed up front, then design and build on a staging
+            link you can share. Includes analytics, a sitemap, structured data, redirects from any old
+            URLs, and a walkthrough of how to edit your own content.</div>
+        </div>
+      </article>
+
+      <article class="card rv">
+        <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18"/></svg></div>
+        <h3>Web platform builds</h3>
+        <p>When a website isn't enough: customer logins, dashboards, booking and scheduling,
+          internal tools, client portals. Built to be handed over and maintained, not to impress
+          at a demo and rot after.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Accounts, roles and permissions</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Integrations with tools you already pay for</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Documented handover</li>
+        </ul>
+        <button class="card-more" type="button" aria-expanded="false" aria-controls="svc2">Details<span class="chev" aria-hidden="true"></span></button>
+        <div class="card-detail" id="svc2" hidden>
+          <div><span>Typical build</span><b>6–12 weeks</b></div>
+          <div><span>From</span><b>$8,500</b></div>
+          <div class="full">Scoped in phases so something usable ships early rather than everything
+            landing at the end. Data model and permissions written down before build, a staging
+            environment throughout, and an admin account for you from day one.</div>
+        </div>
+      </article>
+
+      <article class="card rv">
+        <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></div>
+        <h3>Managed hosting &amp; care</h3>
+        <p>We host what we build. Uptime watched, backups taken, certificates renewed, updates
+          applied — and a named person to talk to when you need something changed.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Incidents logged and resolved openly</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Support tickets with live chat</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Predictable monthly invoicing</li>
+        </ul>
+        <button class="card-more" type="button" aria-expanded="false" aria-controls="svc3">Details<span class="chev" aria-hidden="true"></span></button>
+        <div class="card-detail" id="svc3" hidden>
+          <div><span>Starts at</span><b>$29/month</b></div>
+          <div><span>Notice period</span><b>30 days</b></div>
+          <div class="full">Uptime checked every minute from more than one location, daily off-site
+            backups kept for 30 days and restore-tested quarterly, certificates renewed automatically,
+            and dependency patches applied on a monthly cycle — sooner for anything security-critical.</div>
+        </div>
+      </article>
+
+      <article class="card rv">
+        <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.5 14h-.3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3 1.6 1.6 0 0 0 1-1.5v-.3a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8 1.6 1.6 0 0 0 1.5 1h.3a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.5 1Z"/></svg></div>
+        <h3>IT support</h3>
+        <p>The everyday stuff: accounts that won't log in, a printer nobody can reach, email going
+          to spam, a new starter who needs setting up on Monday. Remote first, on site when
+          remote won't cut it.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Every request gets a ticket number</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Accounts, email and device setup</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Same people who built your site</li>
+        </ul>
+        <button class="card-more" type="button" aria-expanded="false" aria-controls="svc4">Details<span class="chev" aria-hidden="true"></span></button>
+        <div class="card-detail" id="svc4" hidden>
+          <div><span>From</span><b>$45/month</b></div>
+          <div><span>Per user</span><b>Or per device</b></div>
+          <div class="full">Support runs through the same ticketing system as everything else, so a
+            question about a website and a question about a laptop land in one queue with one
+            history. Live chat on any open ticket. On-site visits are quoted by distance, not by
+            an hourly rate that starts when the van leaves.</div>
+        </div>
+      </article>
+
+      <article class="card rv">
+        <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 5 5L15 15l-6 6a2.1 2.1 0 0 1-3-3l6-6-4.5-4.5a4 4 0 0 0 5-5L14.5 5.5Z"/></svg></div>
+        <h3>IT repairs</h3>
+        <p>Hardware that's still worth saving. Screens, batteries, drives, boards, the machine
+          that's been making that noise since March. Diagnosed first, quoted second, and told
+          honestly when it isn't worth the money.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Free diagnosis before any work starts</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Data recovery and safe migration</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>No fix, no fee</li>
+        </ul>
+        <button class="card-more" type="button" aria-expanded="false" aria-controls="svc5">Details<span class="chev" aria-hidden="true"></span></button>
+        <div class="card-detail" id="svc5" hidden>
+          <div><span>Diagnosis</span><b>Free</b></div>
+          <div><span>Typical turnaround</span><b>2–5 days</b></div>
+          <div class="full">You get a written quote after diagnosis and nothing proceeds until you
+            say yes. If a repair costs more than the machine is worth we'll say so and price the
+            alternative instead. Data comes off the old drive and onto the new one before anything
+            is wiped — and nothing is wiped without you confirming it.</div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== WORK ===================== -->
+<!-- Cards are built from the WORK array in site.js so the gallery, the
+     filter counts and the case-study modal all read from one list. The
+     entries shipped here are SAMPLES — they carry a visible "Sample" badge
+     precisely so the page never reads as a claim about real clients.
+     Replace them (and drop the badge markup in workCardHtml) as real
+     projects ship. -->
+<section class="section" id="work">
+  <div class="wrap">
+    <div class="section-head rv">
+      <div class="eyebrow">Selected work</div>
+      <h2>What a finished job looks like</h2>
+      <p>Sample projects, written up the way we write up real ones: what the problem was, what we
+        built, and what changed afterwards. Pick one to read the detail.</p>
+    </div>
+
+    <div class="filters rv" id="workFilters" role="group" aria-label="Filter work by type"></div>
+    <div class="work-grid" id="workGrid"></div>
+  </div>
+</section>
+
+<!-- ===================== PROCESS ===================== -->
+<section class="section alt" id="process">
+  <div class="wrap">
+    <div class="section-head rv">
+      <div class="eyebrow">How it goes</div>
+      <h2>Four steps, no mystery</h2>
+      <p>You'll always know which step you're on, what we're waiting on, and what it costs.
+        Pick a step to see exactly what happens in it.</p>
+    </div>
+
+    <div class="steps" id="steps" role="tablist" aria-label="Project stages">
+      <button class="step step-btn rv" role="tab" id="stepTab0" aria-controls="stepPanel" aria-selected="true">
+        <span class="step-num">01</span>
+        <span class="sh">Discovery</span>
+        <span class="sp">A call and a short written brief. What the site has to do, who it's for, what "done"
+          means. Fixed quote before anyone writes code.</span>
+      </button>
+      <button class="step step-btn rv" role="tab" id="stepTab1" aria-controls="stepPanel" aria-selected="false" tabindex="-1">
+        <span class="step-num">02</span>
+        <span class="sh">Design &amp; build</span>
+        <span class="sp">You see it early and often on a staging link, not once at the end. Feedback in
+          writing, changes tracked, nothing lost in a thread.</span>
+      </button>
+      <button class="step step-btn rv" role="tab" id="stepTab2" aria-controls="stepPanel" aria-selected="false" tabindex="-1">
+        <span class="step-num">03</span>
+        <!-- The only place on the page that needs a translation key of its
+             own. Everywhere else the English text is the key, but "Launch"
+             is also a plan name three sections down, and the plan names
+             don't translate. The key tells the two apart. -->
+        <span class="sh" data-i18n="process.launch">Launch</span>
+        <span class="sp">Domain, certificates, redirects, analytics and backups configured before go-live.
+          We do the switchover, you don't chase a registrar.</span>
+      </button>
+      <button class="step step-btn rv" role="tab" id="stepTab3" aria-controls="stepPanel" aria-selected="false" tabindex="-1">
+        <span class="step-num">04</span>
+        <span class="sh">Operate</span>
+        <span class="sp">Monitoring on, support access handed over, and a monthly plan that covers updates,
+          fixes and small changes.</span>
+      </button>
+    </div>
+
+    <!-- Filled from the PROCESS array; swaps rather than reflows so the page
+         doesn't jump under you when you click along the timeline. -->
+    <div class="step-panel rv" id="stepPanel" role="tabpanel" aria-labelledby="stepTab0"></div>
+  </div>
+</section>
+
+<!-- ===================== INCLUDED ===================== -->
+<section class="section" id="included">
+  <div class="wrap">
+    <div class="section-head rv">
+      <div class="eyebrow">What's included</div>
+      <h2>The operations side, handled</h2>
+      <p>The part most quotes leave out. Every hosted client gets these as standard — they're
+        how we run the business, not an upsell.</p>
+    </div>
+
+    <div class="feat-grid">
+      <div class="feat rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <div><h4>Uptime &amp; status</h4><p>Every site carries a live status. If it moves off "Up", an incident opens automatically and you can see it.</p></div>
+      </div>
+      <div class="feat rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/><path d="M10 6v12" stroke-dasharray="2 2"/></svg>
+        <div><h4>Ticketed support</h4><p>Requests get a number and a status, so nothing lives or dies in one person's inbox.</p></div>
+      </div>
+      <div class="feat rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-4-1L3 20l1.2-4.5A8.4 8.4 0 0 1 3 11.5 8.5 8.5 0 0 1 11.5 3 8.5 8.5 0 0 1 21 11.5Z"/></svg>
+        <div><h4>Live chat</h4><p>Any ticket can become a live conversation when back-and-forth by email is the slow way round.</p></div>
+      </div>
+      <div class="feat rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>
+        <div><h4>Client portal</h4><p>Your own login showing your sites, your invoices and your incident history — and nothing else.</p></div>
+      </div>
+      <div class="feat rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6M7 17h4"/><circle cx="17" cy="16" r="2.5"/></svg>
+        <div><h4>Clear invoicing</h4><p>Recurring monthly invoices per site. You can see what's paid and what isn't without asking.</p></div>
+      </div>
+      <div class="feat rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3Z"/><path d="M9 12l2 2 4-4.5"/></svg>
+        <div><h4>Patching &amp; backups</h4><p>Certificates renewed, dependencies updated, daily backups kept and periodically restore-tested.</p></div>
+      </div>
+      <div class="feat rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7Z"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></svg>
+        <div><h4>Told, not surprised</h4><p>Incidents, invoices and ticket replies reach you by email, SMS, push or in the portal — whichever you switch on, and only those.</p></div>
+      </div>
+      <div class="feat rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-1a5 5 0 0 1 10 0v1"/><circle cx="9" cy="7.5" r="3.4"/><path d="M16 20v-1a4.6 4.6 0 0 1 4-4.5"/></svg>
+        <div><h4>Roles from day one</h4><p>Staff, moderators, admins and you — separate accounts with separate permissions, so nobody shares a login.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECURITY ===================== -->
+<!-- Everything claimed here is a practice from the App Development Plan's
+     DevOps section, written the way a customer would ask about it rather
+     than the way an engineer would spec it: what it means for you, not
+     which tool does it. -->
+<section class="section alt" id="security">
+  <div class="wrap">
+    <div class="section-head rv">
+      <div class="eyebrow">Security</div>
+      <h2>Boring on purpose</h2>
+      <p>Security work is only interesting when it goes wrong. These are the defaults on every
+        site and platform we run — not a premium tier, not a line item.</p>
+    </div>
+
+    <div class="sec-grid">
+      <!-- Decorative, and aria-hidden for it: the four labelled faces repeat
+           items already listed beside it, so nothing here is information you
+           can only get by watching a cube spin. -->
+      <div class="cube-wrap rv" aria-hidden="true">
+        <div class="cube">
+          <div class="face f1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <b>TLS</b><span>In transit</span>
+          </div>
+          <div class="face f2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/><path d="M9 8h6M9 11h6"/></svg>
+            <b>2FA</b><span>On accounts</span>
+          </div>
+          <div class="face f3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h13"/><circle cx="18.5" cy="12" r="2.5"/></svg>
+            <b>Hashed</b><span>Passwords</span>
+          </div>
+          <div class="face f4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h7M7 17h4"/></svg>
+            <b>Audit</b><span>Logged</span>
+          </div>
+          <div class="face f5 cap"></div>
+          <div class="face f6 cap"></div>
+        </div>
+        <span class="cube-hint">Hover to hold</span>
+      </div>
+
+      <div>
+        <div class="sec-list">
+          <div class="sec-item rv">
+            <span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><b>Encrypted in transit</b></span>
+            <p>HTTPS everywhere, TLS on every connection, certificates renewed automatically before
+              they lapse. No plain-text logins, ever.</p>
+          </div>
+          <div class="sec-item rv">
+            <span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h13"/><circle cx="18.5" cy="12" r="2.5"/></svg><b>Passwords we can't read</b></span>
+            <p>Stored as one-way hashes, never as text. Nobody here can look up your password,
+              which is also why we can only reset it, not tell you it.</p>
+          </div>
+          <div class="sec-item rv">
+            <span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg><b>Two-factor authentication</b></span>
+            <p>App-based codes on every staff and admin account, and available to you. Email
+              verification and password reset come as standard.</p>
+          </div>
+          <div class="sec-item rv">
+            <span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h7M7 17h4"/></svg><b>Audit logs</b></span>
+            <p>Who changed what, and when. Privileged actions are recorded, so an awkward question
+              six months later has an answer.</p>
+          </div>
+          <div class="sec-item rv">
+            <span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/></svg><b>Encrypted backups</b></span>
+            <p>Taken daily, held off-site, encrypted at rest and restore-tested on a schedule —
+              because an untested backup isn't a backup.</p>
+          </div>
+          <div class="sec-item rv">
+            <span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h4l2.5 6 4-14 2.5 8h5"/></svg><b>Watched constantly</b></span>
+            <p>Crashes, slow requests and server errors raise an alert on our side. Usually we're
+              already looking at it when you call.</p>
+          </div>
+        </div>
+
+        <p class="sec-note rv">
+          <b>On compliance:</b> we build to GDPR as the baseline — UK and EU data centres unless you
+          need somewhere specific, a data-processing agreement on request, and deletion that
+          actually deletes. Card details never touch our servers; payments run through a PCI-DSS
+          compliant provider. Anything with stricter rules attached, tell us at discovery and we'll
+          scope to it rather than discover it late.
+          <br><br>
+          <b>And one thing we don't ship:</b> default passwords. Every system we hand over requires
+          a real admin account to be created at setup, with a password you choose.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PRICING ===================== -->
+<!-- Not .alt, unlike v1: the tier cards are --surface, so on an --alt band
+     they read as one flat sheet with hairlines drawn on it. On the plain --bg
+     band they sit up off the page, which is the whole point of the tilt. -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="section-head rv">
+      <div class="eyebrow">Pricing</div>
+      <h2>Hosting plans</h2>
+      <p>Build work is quoted per project after discovery. Hosting and care is a flat monthly
+        plan so there are no surprise bills.</p>
+    </div>
+
+    <div class="rv">
+      <div class="price-toggle" role="group" aria-label="Billing period">
+        <button type="button" class="on" id="billMonthly" aria-pressed="true">Monthly</button>
+        <button type="button" id="billAnnual" aria-pressed="false">Annual<span class="save-chip">−20%</span></button>
+      </div>
+    </div>
+
+    <div class="tiers">
+      <article class="tier rv" data-plan="Launch">
+        <h3>Launch</h3>
+        <p class="blurb">A brochure site that needs to stay up and stay current.</p>
+        <div class="amt"><span class="num" data-m="29" data-a="23">$29</span><span class="per">/month</span></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>1 website</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>TLS, daily backups, patching</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Uptime monitoring</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Email support, 2 business days</li>
+          <li class="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Content changes included</li>
+        </ul>
+        <a class="btn" href="#contact">Choose Launch</a>
+      </article>
+
+      <article class="tier featured rv" data-plan="Growth">
+        <span class="tier-flag">Most chosen</span>
+        <h3>Growth</h3>
+        <p class="blurb">A working site you actually change month to month.</p>
+        <div class="amt"><span class="num" data-m="79" data-a="63">$79</span><span class="per">/month</span></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Up to 3 websites</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Everything in Launch</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>1 hour of content changes / month</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Ticketed support + live chat</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Client portal access</li>
+        </ul>
+        <a class="btn btn-primary" href="#contact">Choose Growth</a>
+      </article>
+
+      <article class="tier rv" data-plan="Managed">
+        <h3>Managed</h3>
+        <p class="blurb">A platform with logins and moving parts, treated as production.</p>
+        <div class="amt"><span class="num" data-m="199" data-a="159">$199</span><span class="per">/month</span></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Unlimited sites &amp; staging</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Everything in Growth</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>4 hours of dev time / month</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Priority response, same business day</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Named account contact</li>
+        </ul>
+        <a class="btn" href="#contact">Choose Managed</a>
+      </article>
+
+      <!-- Enterprise carries no .num / .per — the billing toggle rewrites
+           those by class, and there is no monthly figure here to rewrite. -->
+      <article class="tier rv" data-plan="Enterprise">
+        <h3>Enterprise</h3>
+        <p class="blurb">Multiple sites, staff devices and a compliance team asking questions.</p>
+        <div class="amt"><span class="num-custom">Let's talk</span></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Everything in Managed</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>IT support across your whole team</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Written SLA and response targets</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Data-processing agreement</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Priced per site and per seat</li>
+        </ul>
+        <a class="btn" href="#contact">Talk to us</a>
+      </article>
+    </div>
+
+    <!-- The detail people actually compare on, folded away by default so the
+         three cards above stay the first thing you read. -->
+    <details class="cmp rv" id="cmp">
+      <summary>Compare every line, side by side</summary>
+      <div class="cmp-scroll">
+        <table class="cmp-table">
+          <colgroup><col><col><col class="hi"><col><col></colgroup>
+          <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col">Launch</th>
+              <th scope="col" class="hi">Growth</th>
+              <th scope="col">Managed</th>
+              <th scope="col">Enterprise</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Websites included</th><td>1</td><td>3</td><td>Unlimited</td><td>Unlimited</td></tr>
+            <tr><th scope="row">Staging environment</th><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+            <tr><th scope="row">TLS certificates</th><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+            <tr><th scope="row">Backup retention</th><td>7 days</td><td>30 days</td><td>90 days</td><td>Agreed</td></tr>
+            <tr><th scope="row">Restore testing</th><td>Yearly</td><td>Quarterly</td><td>Monthly</td><td>Monthly</td></tr>
+            <tr><th scope="row">Uptime check interval</th><td>5 min</td><td>1 min</td><td>30 sec</td><td>30 sec</td></tr>
+            <tr><th scope="row">Dependency patching</th><td>Quarterly</td><td>Monthly</td><td>Monthly + urgent</td><td>Monthly + urgent</td></tr>
+            <tr><th scope="row">Support channel</th><td>Email</td><td>Tickets + chat</td><td>Tickets + chat</td><td>Tickets, chat, phone</td></tr>
+            <tr><th scope="row">First response target</th><td>2 business days</td><td>1 business day</td><td>Same business day</td><td>Per SLA</td></tr>
+            <tr><th scope="row">Content changes included</th><td><span class="no">—</span></td><td>1 hr / month</td><td>4 hrs / month</td><td>Agreed</td></tr>
+            <tr><th scope="row">IT support for staff</th><td><span class="no">—</span></td><td><span class="no">—</span></td><td>Add-on</td><td><span class="yes">✓</span></td></tr>
+            <tr><th scope="row">Two-factor authentication</th><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td>Enforced</td></tr>
+            <tr><th scope="row">Audit log retention</th><td>30 days</td><td>90 days</td><td>12 months</td><td>Agreed</td></tr>
+            <tr><th scope="row">Client portal access</th><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+            <tr><th scope="row">Named account contact</th><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+            <tr><th scope="row">Monthly written report</th><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+            <tr><th scope="row">Data-processing agreement</th><td>On request</td><td>On request</td><td>On request</td><td><span class="yes">✓</span></td></tr>
+            <tr><th scope="row">Extra work, hourly</th><td>$75</td><td>$65</td><td>$55</td><td>Per SLA</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <p class="price-foot rv">
+      All prices exclude applicable taxes and are billed in CAD. Build projects and repairs are quoted separately
+      as one-off work — no plan locks you in, cancel with 30 days' notice.
+    </p>
+  </div>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section class="section alt" id="faq">
+  <div class="wrap">
+    <div class="section-head rv">
+      <div class="eyebrow">Questions</div>
+      <h2>The things people ask first</h2>
+      <p>Twenty-one answers, searchable. If yours isn't here, ask it in the form below and we'll
+        add it.</p>
+    </div>
+
+    <div class="faq-tools rv">
+      <div class="faq-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="faqSearch" placeholder="Search the questions… (press /)" aria-label="Search frequently asked questions">
+      </div>
+      <button class="btn" type="button" id="faqToggleAll" aria-expanded="false">Expand all</button>
+    </div>
+
+    <div class="faq">
+      <details class="qa rv">
+        <summary>Do I own the site, or am I renting it from you?</summary>
+        <div class="qa-body">You own it. The domain stays in your name, and you get the source
+          code. A hosting plan is for running and maintaining it — leaving means moving the site,
+          not losing it.</div>
+      </details>
+      <details class="qa rv">
+        <summary>How long does a build take?</summary>
+        <div class="qa-body">A straightforward brochure site is usually 2–4 weeks from signed
+          brief. Platform work with logins and integrations is quoted with a schedule after
+          discovery, because guessing that number helps nobody.</div>
+      </details>
+      <details class="qa rv">
+        <summary>What happens when something breaks at 9pm?</summary>
+        <div class="qa-body">Monitoring flags it and an incident opens against your site. On
+          Launch and Growth we act next business day; on Managed, priority issues get a same-day
+          response. Either way you can see the incident rather than wondering.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Can you take over a site somebody else built?</summary>
+        <div class="qa-body">Often yes. We'll audit it first and tell you honestly whether it's
+          worth adopting as-is or whether you'd spend less rebuilding it than maintaining it.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Do you do SEO and content?</summary>
+        <div class="qa-body">We build sites to be technically sound — structure, speed,
+          accessibility, metadata. Ongoing content writing and campaign work isn't our trade, and
+          we'll say so rather than bill for it badly.</div>
+      </details>
+      <details class="qa rv">
+        <summary>What if I only want the build, not the hosting?</summary>
+        <div class="qa-body">That's fine. We'll hand over the code and a deployment guide. Most
+          people stay on a plan because it's the same team, but it isn't a condition.</div>
+      </details>
+      <details class="qa rv">
+        <summary>How do you handle payment — deposit, stages, on completion?</summary>
+        <div class="qa-body">Build work is a third to start, a third at design sign-off and a third
+          on launch. Hosting is billed monthly in advance from the day the site goes live, not from
+          the day you signed. Invoices are 14 days.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Where is the site actually hosted, and who can see my data?</summary>
+        <div class="qa-body">UK and EU data centres unless you need somewhere specific. Access is
+          limited to the people working on your account, backups are encrypted at rest, and we'll
+          sign a data-processing agreement if your compliance team needs one.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Is accessibility included or is it extra?</summary>
+        <div class="qa-body">Included. We build to WCAG 2.2 AA as a baseline — keyboard operation,
+          contrast, focus states, real labels — because retrofitting it costs far more than doing it
+          the first time. A formal audit by a third party is extra, and we'll arrange one if you want it.</div>
+      </details>
+      <details class="qa rv">
+        <summary>What happens if I outgrow my plan?</summary>
+        <div class="qa-body">You move up whenever you like and we pro-rate the difference. Moving
+          down works the same way at the end of a billing month. Nobody gets billed for a plan they
+          stopped needing six months ago — if we notice that, we'll tell you.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Can we do the content ourselves?</summary>
+        <div class="qa-body">Yes, and most clients do. Content-managed sections come with an editor
+          and a short handover session. If writing it is the thing blocking launch, say so early and
+          we'll build around placeholder content rather than wait.</div>
+      </details>
+      <details class="qa rv">
+        <summary>What don't you do?</summary>
+        <div class="qa-body">Native mobile apps, ad campaign management, and ongoing copywriting.
+          We'll recommend someone rather than take the work and do it half-well.</div>
+      </details>
+      <details class="qa rv">
+        <summary>How do I get my site back if we part ways?</summary>
+        <div class="qa-body">Ask, and you get the code, the database, the assets and the DNS
+          details — within five working days, at no charge, whatever the reason for leaving. There's
+          no hostage clause in the contract because there shouldn't be one.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Do you work with fixed budgets?</summary>
+        <div class="qa-body">Often the most useful way to start. Tell us the number and we'll tell
+          you honestly what fits inside it, what doesn't, and whether it's worth doing at all at
+          that level.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Can you work with our existing designer or brand guidelines?</summary>
+        <div class="qa-body">Yes, and it usually saves money. Send us the brand guide and we'll build
+          to it. If you have a designer producing screens, we'll agree a handover format with them up
+          front so nothing gets redrawn twice.</div>
+      </details>
+      <details class="qa rv">
+        <summary>What do you need from me to keep things moving?</summary>
+        <div class="qa-body">Someone who can make decisions, feedback within a few days of each
+          staging round, and content when we ask for it. Projects slip on waiting, almost never on
+          building.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Do I have to be a web client to get IT support?</summary>
+        <div class="qa-body">No. Support and repairs stand on their own — plenty of people come to
+          us with a room full of machines and no website at all. It's cheaper bundled, because it's
+          one relationship instead of two, but nothing is conditional on anything else.</div>
+      </details>
+      <details class="qa rv">
+        <summary>How long does a repair take, and what if it can't be fixed?</summary>
+        <div class="qa-body">Two to five working days for most things, longer if a part has to come
+          from far away — we'll tell you which before you leave it with us. Diagnosis is free, you
+          get a written quote before any work starts, and if we can't fix it you don't pay. If the
+          repair costs more than the machine is worth, we'll say that instead of quietly doing it.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Can you recover data off a drive that's failed?</summary>
+        <div class="qa-body">Often, and it's the first thing we try before anything else is touched.
+          Nothing gets wiped or reinstalled until you've confirmed the data is safely off and you've
+          seen it. Physically damaged platters need a specialist lab — we'll refer you rather than
+          make it worse having a go.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Do you support our staff directly, or do we have to relay everything?</summary>
+        <div class="qa-body">Directly. Your team raise their own tickets and talk to us themselves,
+          which is faster for everyone and stops one person becoming the office help desk. You still
+          see everything on your account, so nothing happens off the record.</div>
+      </details>
+      <details class="qa rv">
+        <summary>Do you have access to our data, and can you delete it if we ask?</summary>
+        <div class="qa-body">We have the access needed to run and support your systems, limited to
+          the people actually working on your account and recorded in an audit log. If you ask us to
+          delete something, it's deleted — including from backups as they age out, and we'll tell you
+          when that's complete rather than leaving you to assume.</div>
+      </details>
+    </div>
+
+    <p class="faq-count" id="faqCount" role="status"></p>
+  </div>
+</section>
+
+<!-- ===================== SUPPORT TICKETS =====================
+     Everything above this point sells to someone who isn't a client yet.
+     This is the other door: the one you use when you already are one and
+     something has broken. It's deliberately not folded into the contact
+     form below — "my checkout is down" and "quote me a website" are not
+     the same message, and making an existing client queue behind a sales
+     enquiry is exactly the supplier behaviour the rest of the page is
+     arguing against.
+
+     The fields mirror a real ticket rather than inventing a parallel
+     shape — title, affected system, a low/medium/high/critical priority,
+     and five statuses — so what a client types here maps field-for-field
+     onto the ticket the team opens.
+
+     Like the contact form below it, THERE IS NO BACKEND. It hands off to
+     the visitor's mail client rather than fabricating a ticket number, and
+     says so under the button. That is the honest behaviour for a site with
+     no server of its own, and it is why this folder can sit on any static
+     host. Both forms share one hand-off, so wiring a real endpoint later is
+     a change in one place — see "Mail hand-off" in site.js, and set the
+     addresses in MAIL_TO just above it.
+
+     Response targets and the support-hours line are placeholder copy, the
+     same as the pricing numbers. Edit them to whatever the agreements
+     actually promise before this page goes anywhere near a real client.
+============================================================== -->
+<section class="section" id="support">
+  <div class="wrap">
+    <div class="section-head rv">
+      <div class="eyebrow">Already with us</div>
+      <h2>Something broken? Raise a ticket</h2>
+      <p>One queue, no tiers of humans to climb through. Tell us what's wrong and how badly it's
+        hurting, and it lands on the same board the people who built your site work from.</p>
+    </div>
+
+    <div class="tkt-grid">
+      <form class="tkt-panel rv" id="ticketForm" novalidate>
+        <div class="form-ok" id="tkOk" hidden>
+          Ticket ready to send. <span id="tkOkDetail"></span>
+        </div>
+
+        <label class="field">
+          <span>One line: what's wrong?</span>
+          <input id="tkSubject" name="subject" required placeholder="Checkout page returns a 500 error">
+          <em class="field-err">Give it a short title so we can both find it again.</em>
+        </label>
+
+        <div class="tkt-row">
+          <label class="field">
+            <span>Your name</span>
+            <input id="tkName" name="name" autocomplete="name" required>
+            <em class="field-err">We need something to call you.</em>
+          </label>
+          <label class="field">
+            <span>Email</span>
+            <input id="tkEmail" name="email" type="email" autocomplete="email" required>
+            <em class="field-err">That doesn't look like an email address.</em>
+          </label>
+        </div>
+
+        <div class="tkt-row">
+          <label class="field">
+            <span>Site or system <span style="font-weight:400; opacity:.75;">(optional)</span></span>
+            <input id="tkSystem" name="system" placeholder="example.com, or the office printer">
+          </label>
+          <label class="field">
+            <span>What kind of problem?</span>
+            <select id="tkCategory" name="category">
+              <option>Site or app is down</option>
+              <option>Broken, but still up</option>
+              <option>Email, domain or DNS</option>
+              <option>Hosting, backups or certificates</option>
+              <option>A change to an existing site</option>
+              <option>Device, hardware or network repair</option>
+              <option>Account, billing or invoice</option>
+              <option>Something else</option>
+            </select>
+          </label>
+        </div>
+
+        <fieldset class="tkt-block">
+          <legend>How badly is it hurting?</legend>
+          <div class="opt-grid" id="tkPriority"></div>
+          <p class="tkt-target" id="tkTarget" aria-live="polite"></p>
+        </fieldset>
+
+        <label class="field">
+          <span>What's happening? <span class="char-count" id="tkCount">0 / 2000</span></span>
+          <textarea id="tkDetails" name="details" maxlength="2000"
+            placeholder="What you did, what you expected, what happened instead. Exact error text, the page it happens on, and when it started all cut a round-trip out."></textarea>
+        </label>
+
+        <!-- Honeypot, same as the contact form: real people never see it, so
+             anything that fills it in isn't one. -->
+        <div class="hp" aria-hidden="true"><label>Leave this empty<input id="tkHp" name="reference" tabindex="-1" autocomplete="off"></label></div>
+
+        <button class="btn btn-primary btn-lg" type="submit" style="width:100%;">Raise the ticket</button>
+        <p class="form-note">
+          No backend is wired up to this form yet — submitting opens your email client with the
+          ticket filled in, and we open it on our side. The ticket number comes back in the reply.
+        </p>
+      </form>
+
+      <aside class="tkt-side">
+        <div class="tkt-card rv">
+          <h4>What we aim for</h4>
+          <div id="slaList"></div>
+          <p class="sla-foot">Time to a first human reply during support hours, not time to a fix —
+            we'd rather tell you what we've found in an hour than go quiet for a day. Managed plans
+            include out-of-hours cover for Critical.</p>
+        </div>
+
+        <div class="tkt-card rv">
+          <h4>Where your ticket goes</h4>
+          <ol class="life">
+            <li><span class="n" aria-hidden="true">1</span><b>Unread</b>It's on the board. Nobody has opened it yet.</li>
+            <li><span class="n" aria-hidden="true">2</span><b>Received</b>Read, understood and assigned to a person by name.</li>
+            <li><span class="n" aria-hidden="true">3</span><b>Being worked on</b>Someone is actually on it, and you can see who.</li>
+            <li><span class="n" aria-hidden="true">4</span><b>Finished</b>Fixed and written up. Yours to check before it closes.</li>
+            <li><span class="n" aria-hidden="true">5</span><b>Closed</b>Agreed done. The history stays attached to your site.</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CONTACT ===================== -->
+<!-- .alt lives here rather than on Support above: the bands alternate, and
+     Support wants the plain --bg that lets its --surface form panel sit up
+     off the page (same reasoning as #pricing). -->
+<section class="section alt" id="contact">
+  <div class="wrap">
+    <div class="contact-grid">
+      <div>
+        <div class="section-head rv" style="margin-bottom:28px;">
+          <div class="eyebrow">Get started</div>
+          <h2>Tell us what you need</h2>
+          <p>A few lines is enough to start. We'll reply with either a straight answer or the
+            two questions we'd need answered to quote it.</p>
+        </div>
+
+        <form id="contactForm" class="rv" novalidate>
+          <div class="form-ok" id="formOk" hidden>
+            Thanks — your enquiry is ready to send. <span id="formOkDetail"></span>
+          </div>
+          <label class="field">
+            <span>Your name</span>
+            <input id="cName" name="name" autocomplete="name" required>
+            <em class="field-err">We need something to call you.</em>
+          </label>
+          <label class="field">
+            <span>Email</span>
+            <input id="cEmail" name="email" type="email" autocomplete="email" required>
+            <em class="field-err">That doesn't look like an email address.</em>
+          </label>
+          <label class="field"><span>What do you need?</span>
+            <select id="cType" name="type">
+              <option>A new website</option>
+              <option>An online store</option>
+              <option>A web platform / customer logins</option>
+              <option>Rebuild or takeover of an existing site</option>
+              <option>Hosting &amp; care for an existing site</option>
+              <option>IT support for our team</option>
+              <option>A repair or hardware problem</option>
+              <option>Not sure yet</option>
+            </select>
+          </label>
+          <label class="field"><span>Budget range <span style="font-weight:400; opacity:.75;">(optional)</span></span>
+            <select id="cBudget" name="budget">
+              <option>Rather not say yet</option>
+              <option>Under $2,500</option>
+              <option>$2,500 – $5,000</option>
+              <option>$5,000 – $10,000</option>
+              <option>$10,000 – $25,000</option>
+              <option>$25,000+</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Anything useful to know <span class="char-count" id="cCount">0 / 1200</span></span>
+            <textarea id="cMsg" name="message" maxlength="1200" placeholder="Rough timescale, budget range, links to anything you like…"></textarea>
+          </label>
+          <!-- Honeypot: real people never see it, so anything that fills it in
+               isn't a real person. Kept off-screen rather than display:none,
+               which some bots specifically skip. -->
+          <div class="hp" aria-hidden="true"><label>Leave this empty<input id="cHp" name="company" tabindex="-1" autocomplete="off"></label></div>
+          <button class="btn btn-primary btn-lg" type="submit" style="width:100%;">Send enquiry</button>
+          <p class="form-note" id="formNote">
+            No backend is wired up to this form yet — submitting opens your email client with the
+            details filled in. Swap in a real endpoint when you're ready.
+          </p>
+        </form>
+      </div>
+
+      <div class="contact-side">
+        <div class="feat rv">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <div><h4>Typical reply time</h4><p>One business day. If we're too booked to take the work, we'll say that quickly rather than go quiet.</p></div>
+        </div>
+        <div class="feat rv">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16l4 4v13.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 20.5v-16Z"/><path d="M16 3v4h4M8 12h8M8 16h5"/></svg>
+          <div><h4>What we'll send back</h4><p>A fixed quote and a written scope — what's in, what's out, and what it costs to change your mind later.</p></div>
+        </div>
+        <div class="feat rv">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.2"/><path d="M2 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M14.5 20c.3-2.7 2.2-4.6 4.5-4.6 2.6 0 4.7 2.3 5 5.4"/></svg>
+          <div><h4>Who you'll deal with</h4><p>The people doing the work. No account layer relaying messages to a team you never meet.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-col" style="max-width:280px;">
+        <a class="brand-lockup" href="#top" style="margin-bottom:12px;">
+          <span class="brand-mark" aria-hidden="true">
+            <span class="bar b1"></span><span class="bar b2"></span><span class="bar b3"></span>
+          </span>
+          <span class="brand-title">MOS</span>
+        </a>
+        <p style="font-size:13.5px; color:var(--text-soft);">
+          We build websites and web platforms, host and look after them, and handle the rest of
+          your IT.
+        </p>
+      </div>
+      <div class="foot-col">
+        <h5>Services</h5>
+        <a href="#services">Website design &amp; build</a>
+        <a href="#services">Web platform builds</a>
+        <a href="#services">Managed hosting</a>
+        <a href="#services">IT support</a>
+        <a href="#services">IT repairs</a>
+      </div>
+      <div class="foot-col">
+        <h5>Company</h5>
+        <a href="#process">How we work</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a href="#support">Raise a ticket</a>
+        <a href="#contact">Contact</a>
+      </div>
+      <div class="foot-col">
+        <h5>Explore</h5>
+        <a href="#work">Selected work</a>
+        <a href="#included">What's included</a>
+        <a href="#security">Security</a>
+      </div>
+      <!-- The "More" column used to carry Arcade, Client sign in and Staff
+           sign in. All three pointed into the MOS platform and all three are
+           gone: this folder is the brochure, and the brochure has no door
+           into the app. See the STANDALONE note at the top of the file. -->
+    </div>
+    <div class="foot-bar">
+      <span>&copy; <span id="year">2026</span> MOS. All rights reserved.</span>
+      <span style="font-family:var(--font-mono);">Moderators Operation System</span>
+    </div>
+  </div>
+</footer>
+
+<!-- Case-study reader. Built once and reused for every card rather than one
+     dialog per project — the content is swapped in on open. -->
+<div class="modal-root" id="workModal" hidden>
+  <div class="modal-back" id="workModalBack"></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="workModalTitle">
+    <div class="modal-head">
+      <div>
+        <div class="work-kind" id="workModalKind"></div>
+        <h3 id="workModalTitle"></h3>
+      </div>
+      <button class="modal-close" id="workModalClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="workModalBody"></div>
+  </div>
+</div>
+
+<!-- Command palette. The result list is built from the page itself at
+     runtime rather than from a hand-written index — a section renamed or
+     a question added shows up here without anyone remembering to. -->
+<div class="pal-root" id="palette" hidden>
+  <div class="pal-back" id="paletteBack"></div>
+  <div class="pal-panel" role="dialog" aria-modal="true" aria-label="Search this page">
+    <div class="pal-top">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input id="palInput" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Jump to a section, service, plan or question…"
+             role="combobox" aria-expanded="true" aria-controls="palList" aria-autocomplete="list">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="pal-list" id="palList" role="listbox" aria-label="Results"></div>
+    <div class="pal-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+      <span><kbd>↵</kbd> go</span>
+      <span><kbd>Alt</kbd><kbd>↑↓</kbd> step sections</span>
+      <span><kbd>/</kbd> search the FAQ</span>
+    </div>
+  </div>
+</div>
+
+<button class="to-top" id="toTop" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- The French copy, and nothing else. It defines two plain objects and
+     runs no code; site.js reads them if they're there and carries on in
+     English alone if they aren't, so a missing i18n.js costs the language
+     button and nothing more. First, because site.js expects it. -->
+<script src="i18n.js"></script>
+<script src="site.js"></script>
+</body>
+</html>
